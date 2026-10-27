@@ -225,6 +225,10 @@ html.mobil .m-menu.aaben { display: block; position: fixed; inset: 0; z-index: 4
 #bonus .ab-tael { color: var(--svag); font-size: 13px; }
 #bonus .ab-par { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
 #bonus .ab-klip { display: grid; gap: 8px; padding: 14px 10px; border: 1px solid var(--streg); border-radius: 12px; }
+#bonus .ab-klip.spiller { border-color: var(--accent); background: var(--accent-bg); }
+#bonus .ab-bar { height: 4px; background: var(--flade2); border-radius: 2px; overflow: hidden; }
+#bonus .ab-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s linear; }
+#bonus p { color: var(--svag); margin: 0; }
 #bonus .ab-bogstav { font-size: 28px; font-weight: 700; color: var(--accent); }
 #bonus .knap { width: 100%; height: 46px; font-size: 15px; border-radius: 10px; }
 #bonus .saadan { background: none; border: 0; color: var(--svag); text-decoration: underline; padding: 8px; font-size: 14px; cursor: pointer; }
@@ -336,7 +340,9 @@ header > div:first-child .under { flex-basis: 100%; }
   function opdaterSendKnap() {
     const b = document.getElementById("sendResultat"); if (!b) return;
     const { klar, alle } = antal();
-    b.textContent = klar >= alle ? "Færdig – send resultatet til Frankly" : "Send resultatet til Frankly";
+    if (D.web) {  // webudgaven gemmer selv – knappen afslutter bare (Steffen 2026-10-27: tydeligt at intet skal sendes)
+      b.textContent = klar >= alle ? "✓ Færdig – alt er gemt hos Frankly" : "Gemmes automatisk · afslut";
+    } else b.textContent = klar >= alle ? "Færdig – send resultatet til Frankly" : "Send resultatet til Frankly";
     b.classList.toggle("primaer", klar >= alle);
   }
   // ---- Webudgaven (blindtest.franklymydear.dk): karakterer sendes automatisk til jeres eget webhotel ----
@@ -371,11 +377,12 @@ header > div:first-child .under { flex-basis: 100%; }
     const { klar, alle } = antal();
     if (!klar) return alert("Du har ikke givet nogen karakterer endnu.");
     if (D.web) {
-      if (klar < alle && !confirm(`Du har bedømt ${klar} af ${alle} numre. Vil du afslutte nu? (Dine karakterer er allerede gemt, og du kan fortsætte senere.)`)) return;
+      if (klar < alle && !confirm(`Du har bedømt ${klar} af ${alle} numre, og det er allerede gemt hos Frankly. Vil du afslutte nu? Du kan altid fortsætte senere.`)) return;
       try {
         await post(true);
         gemStatus("✓ sendt til Frankly");
-        alert(klar >= alle ? "Tak! Dit resultat er modtaget hos Frankly My Dear." : `Tak! ${klar} af ${alle} numre er modtaget. Du kan fortsætte, når du vil.`);
+        alert(klar >= alle ? "Tak! Alt er gemt hos Frankly My Dear. Du behøver ikke sende noget – du kan bare lukke siden."
+          : `Tak! ${klar} af ${alle} numre er gemt hos Frankly. Du kan fortsætte, når du vil.`);
       } catch (e) {
         alert("Det lykkedes ikke at sende lige nu – tjek internetforbindelsen og prøv igen. Dine karakterer er gemt i browseren.");
       }
@@ -542,21 +549,42 @@ header > div:first-child .under { flex-basis: 100%; }
   // ---- Bonus: 5 hurtige sammenligninger (A/B) – vises, når alle søgninger i pakken er bedømt ----
   const AB_TEKST = {
     da: { titel: "Bonus: 5 hurtige sammenligninger", tekst: "Du hører to korte klip og vælger det, der passer bedst til spørgsmålet. Det tager 2–3 minutter.",
-          start: "Start", spring: "Spring over", lige: "Lige godt / ved ikke", af: "af", tak: "Tak! Dit resultat er gemt hos Frankly My Dear.",
-          luk: "Luk", afspil: "Afspil" },
+          start: "Start", spring: "Spring over", lige: "Lige godt / ved ikke", af: "af",
+          tak: "Tak! Alt er gemt hos Frankly My Dear.", tak2: "Du behøver ikke sende noget – du kan bare lukke siden.",
+          luk: "Luk", afspil: "Afspil", pause: "Pause", vaelg: "Vælg" },
     en: { titel: "Bonus: 5 quick comparisons", tekst: "You will hear two short clips and choose the one that best fits the question. It takes 2–3 minutes.",
-          start: "Start", spring: "Skip", lige: "Equally / not sure", af: "of", tak: "Thank you! Your result has been saved with Frankly My Dear.",
-          luk: "Close", afspil: "Play" },
+          start: "Start", spring: "Skip", lige: "Equally / not sure", af: "of",
+          tak: "Thank you! Everything is saved with Frankly My Dear.", tak2: "You don't need to send anything – you can simply close the page.",
+          luk: "Close", afspil: "Play", pause: "Pause", vaelg: "Choose" },
   };
+  // A/B-afspiller (Steffen 2026-10-27): tydeligt hvad der spiller, en bar for hvor langt klippet er, og stilhed ved valg
   const abLyd = new Audio();
-  let abStop = null;
-  function afspilKlip(k) {
-    if (typeof lyd !== "undefined") lyd.pause();  // stop den almindelige afspiller
-    clearTimeout(abStop);
-    abLyd.src = k.lyd; abLyd.currentTime = 0;
-    abLyd.onloadedmetadata = () => { abLyd.currentTime = k.start || 0; abLyd.play(); };
-    abStop = setTimeout(() => abLyd.pause(), ((k.klip || 12) + 1) * 1000);
+  let abAktiv = null, abKlip = null;  // "a"/"b" og klippets {start, klip}
+  function abOpdater() {
+    document.querySelectorAll("#bonus .ab-klip").forEach(el => {
+      const x = el.dataset.klip, spiller = x === abAktiv && !abLyd.paused;
+      el.classList.toggle("spiller", x === abAktiv);
+      const knap = el.querySelector("[data-afspil-ab]");
+      if (knap) knap.innerHTML = spiller ? "❚❚ " + (knap.dataset.pause || "Pause") : "▶ " + (knap.dataset.afspil || "Afspil");
+      const bar = el.querySelector(".ab-bar i");
+      if (bar) bar.style.width = (x === abAktiv && abKlip ? Math.min(100, 100 * Math.max(0, abLyd.currentTime - abKlip.start) / abKlip.klip) : 0) + "%";
+    });
   }
+  function abStop() { abLyd.pause(); abAktiv = null; abKlip = null; abOpdater(); }
+  function afspilKlip(x, k) {
+    if (typeof lyd !== "undefined") lyd.pause();  // stop den almindelige afspiller
+    if (abAktiv === x && !abLyd.paused) { abLyd.pause(); abOpdater(); return; }  // samme klip igen = pause
+    if (abAktiv === x && abLyd.paused && abKlip) { abLyd.play(); abOpdater(); return; }
+    abAktiv = x; abKlip = { start: k.start || 0, klip: k.klip || 12 };
+    abLyd.src = k.lyd;
+    abLyd.onloadedmetadata = () => { abLyd.currentTime = abKlip.start; abLyd.play(); };
+    abOpdater();
+  }
+  abLyd.addEventListener("timeupdate", () => {
+    if (abKlip && abLyd.currentTime >= abKlip.start + abKlip.klip) return abStop();  // klippet er slut: sluk markeringen
+    abOpdater();
+  });
+  ["play", "pause", "ended"].forEach(e => abLyd.addEventListener(e, abOpdater));
   function abMangler() { return (D.mine_ab || []).filter(id => !tilstand.ab[id] && D.ab?.[id]); }
   function visBonus(tvungen) {
     if (!D.ab || !D.mine_ab || document.getElementById("bonus")) return;
@@ -569,30 +597,36 @@ header > div:first-child .under { flex-basis: 100%; }
       v.innerHTML = `<div class="kort"><img src="${D.ikon}" alt="" width="56" height="56"><h2>${T.titel}</h2><p>${T.tekst}</p>
         <button class="knap primaer" id="bonusStart">${T.start}</button><button class="saadan" id="bonusSpring">${T.spring}</button></div>`;
       v.querySelector("#bonusStart").onclick = () => trin();
-      v.querySelector("#bonusSpring").onclick = () => { tilstand.bonusSprunget = true; gem(); v.remove(); };
+      v.querySelector("#bonusSpring").onclick = () => { tilstand.bonusSprunget = true; gem(); takSkaerm(); };
+    };
+    // Slutskærm: siger tydeligt, at intet skal sendes – eller, hvis nettet svigter, at det sendes næste gang
+    const takSkaerm = () => {
+      abStop();
+      v.innerHTML = `<div class="kort"><div class="m-flueben">✓</div><h2>${T.tak}</h2><p>${T.tak2}</p>
+        <button class="knap" id="bonusLuk">${T.luk}</button></div>`;
+      v.querySelector("#bonusLuk").onclick = () => v.remove();
+      if (D.web) post(true).catch(() => {
+        const en = tilstand.sprog === "en";
+        v.querySelector("h2").textContent = en ? "Saved in your browser" : "Gemt i browseren";
+        v.querySelector("p").textContent = en ? "We couldn't reach Frankly right now. It will be sent automatically next time you open the test."
+          : "Vi kunne ikke nå Frankly lige nu. Det sendes automatisk, næste gang du åbner testen.";
+      });
     };
     const trin = () => {
       const tilbage = abMangler();
-      if (!tilbage.length) {
-        abLyd.pause();
-        v.innerHTML = `<div class="kort"><div class="m-flueben">✓</div><h2>${T.tak}</h2><button class="knap" id="bonusLuk">${T.luk}</button></div>`;
-        v.querySelector("#bonusLuk").onclick = () => v.remove();
-        if (D.web) post(true).catch(() => {
-          const h = v.querySelector("h2");
-          if (h) h.textContent = tilstand.sprog === "en" ? "Saved in your browser – it will be sent next time you open the test."
-            : "Gemt i browseren – det sendes, næste gang du åbner testen.";
-        });
-        return;
-      }
+      if (!tilbage.length) return takSkaerm();
       const p = D.ab[tilbage[0]], nr = D.mine_ab.length - tilbage.length + 1;
       v.innerHTML = `<div class="kort ab"><div class="ab-tael">${nr} ${T.af} ${D.mine_ab.length}</div>
         <h2>${esc(p.spoergsmaal)}</h2>
-        <div class="ab-par">${["a", "b"].map(x => `<div class="ab-klip"><div class="ab-bogstav">${x.toUpperCase()}</div>
-          <button class="knap" data-afspil-ab="${x}">▶ ${T.afspil}</button>
-          <button class="knap primaer" data-valg="${x}">${x.toUpperCase()}</button></div>`).join("")}</div>
+        <div class="ab-par">${["a", "b"].map(x => `<div class="ab-klip" data-klip="${x}"><div class="ab-bogstav">${x.toUpperCase()}</div>
+          <button class="knap" data-afspil-ab="${x}" data-afspil="${T.afspil}" data-pause="${T.pause}">▶ ${T.afspil}</button>
+          <div class="ab-bar"><i></i></div>
+          <button class="knap primaer" data-valg="${x}">${T.vaelg} ${x.toUpperCase()}</button></div>`).join("")}</div>
         <button class="saadan" data-valg="lige">${T.lige}</button></div>`;
-      v.querySelectorAll("[data-afspil-ab]").forEach(b => b.onclick = () => afspilKlip({ ...p[b.dataset.afspilAb], klip: p.klip_sek }));
+      v.querySelectorAll("[data-afspil-ab]").forEach(b => b.onclick = () =>
+        afspilKlip(b.dataset.afspilAb, { ...p[b.dataset.afspilAb], klip: p.klip_sek }));
       v.querySelectorAll("[data-valg]").forEach(b => b.onclick = () => {
+        abStop();  // stilhed, til man selv trykker afspil i næste spørgsmål
         tilstand.ab[p.id] = b.dataset.valg; gem(); autoGem(); trin();
       });
     };
@@ -600,6 +634,7 @@ header > div:first-child .under { flex-basis: 100%; }
     document.body.appendChild(v);
   }
   window.fmdVisBonus = () => visBonus(true);
+  window.fmdWeb = !!D.web;  // mobilvisningen bruger det til at vise "gemmes automatisk" i stedet for "send"
 
   document.addEventListener("DOMContentLoaded", () => {
     const gammel = document.getElementById("visResultat");
@@ -730,7 +765,9 @@ function tegnMobil() {
         <p class="m-tael" id="m-pausetekst" hidden>Dine karakterer er gemt. Luk bare siden – du fortsætter her, når du åbner linket igen.</p></div>
       <div class="m-knapper">${j >= 0 ? `<button class="knap primaer" id="m-naeste">Næste søgning</button>
         <button class="knap" id="m-pause">Hold pause</button>` :
-        `<button class="knap primaer" id="m-send">Alt er bedømt – send resultatet</button>`}
+        (window.fmdWeb ? `<p class="m-tael">Alt er bedømt og gemt hos Frankly ✓ Du behøver ikke sende noget.</p>
+          ${window.fmdVisBonus ? '<button class="knap primaer" id="m-bonus">Bonus: 5 hurtige sammenligninger</button>' : ""}`
+          : `<button class="knap primaer" id="m-send">Alt er bedømt – send resultatet</button>`)}
         <button class="knap" id="m-igen">Se numrene igen</button></div></div>${menuHtml()}`;
     return;
   }
@@ -767,7 +804,9 @@ function tegnMobil() {
 function menuHtml() {
   return `<div class="m-menu" id="m-menuflade">
     <div class="m-linje"><span style="padding-left:12px">Menu</span><button class="m-ikon" id="m-luk" aria-label="Luk">${IKON.luk}</button></div>
-    <button class="knap primaer" id="m-send">Send resultatet til Frankly</button>
+    ${window.fmdWeb ? `<p>Dine svar gemmes automatisk hos Frankly – du behøver ikke sende noget.</p>
+      <button class="knap" id="m-send">Afslut testen</button>`
+      : `<button class="knap primaer" id="m-send">Send resultatet til Frankly</button>`}
     ${window.fmdSkiftNavn ? `<button class="knap" id="m-skift">Skift navn</button>` : ""}
     <h3>Søgninger</h3>
     ${opgaver.map((x, j) => { const mangler = x.numre.length - antalBedoemt(x);
@@ -1035,6 +1074,7 @@ document.addEventListener("click", e => {
   if (t.id === "m-luk") return $("#m-menuflade").classList.remove("aaben");
   if (t.id === "m-send") { $("#m-menuflade")?.classList.remove("aaben"); return ($("#sendResultat") || $("#visResultat"))?.click(); }
   if (t.id === "m-naeste") return gaaTil(naesteUfaerdige());
+  if (t.id === "m-bonus") return window.fmdVisBonus?.();
   if (t.id === "m-skift") return window.fmdSkiftNavn?.();
   if (t.id === "m-pause") { lyd.pause(); $("#m-pausetekst").hidden = false; return; }
   if (t.id === "m-igen") { mFaerdig = false; fokus = 0; return tegnMobil(); }
