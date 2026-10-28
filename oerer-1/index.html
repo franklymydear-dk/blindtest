@@ -271,6 +271,7 @@ async function buffer(n) {
     // Kun ét nummer ad gangen i hukommelsen (et udpakket nummer fylder ca. 90 MB – for meget for en telefon ×12)
     for (const k in buffere) delete buffere[k];
     buffere[n.id] = await ctx.decodeAudioData(b);
+    document.getElementById("tid").textContent = "";
   }
   return buffere[n.id];
 }
