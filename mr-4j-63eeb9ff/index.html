@@ -1,0 +1,1212 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frankly My Dear · Blindtest</title>
+<style>
+/* Altid dunkelt tema (Steffen 2026-10-23) – som et mørkt lytte-/klipperum, uanset Mac'ens indstilling. */
+:root {
+  color-scheme: dark;
+  --bg: #08080a; --flade: #101013; --flade2: #17171b; --tekst: #c9c4bb; --svag: #7a756d; --streg: #222228;
+  --accent: #a8875a; --accent-bg: #1f1a13; --godt: #6fae80; --godt-bg: #0f1f15; --delvist: #c19c55;
+  --delvist-bg: #211b0e; --nej: #c07a70; --nej-bg: #221312; --spiller: #15130f;
+  --praecis: #6aa9ba; --praecis-bg: #0c1c22;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--tekst);
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+button { font: inherit; color: inherit; cursor: pointer; }
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--streg);
+  padding: 14px 20px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+header h1 { font-size: 17px; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
+header .under { color: var(--svag); font-size: 13px; }
+.fremdrift { flex: 1; min-width: 180px; }
+.bjaelke { height: 6px; background: var(--flade2); border-radius: 3px; overflow: hidden; }
+.bjaelke i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.fremdrift small { color: var(--svag); }
+#manglende { color: var(--accent); text-decoration: underline; cursor: pointer; font-weight: 600; }
+.knap { border: 1px solid var(--streg); background: var(--flade); padding: 7px 14px; border-radius: 8px; }
+.knap:hover { border-color: var(--accent); }
+.knap.primaer { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+main { display: grid; grid-template-columns: 290px 1fr; min-height: calc(100vh - 66px); }
+nav { border-right: 1px solid var(--streg); padding: 10px; overflow-y: auto; max-height: calc(100vh - 66px);
+  position: sticky; top: 66px; }
+nav button { display: grid; grid-template-columns: 1fr auto; gap: 6px; width: 100%; text-align: left;
+  background: none; border: 0; padding: 8px 10px; border-radius: 8px; }
+nav button:hover { background: var(--flade2); }
+nav button.valgt { background: var(--accent-bg); }
+nav .navn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+nav .tal { color: var(--svag); font-size: 12px; font-variant-numeric: tabular-nums; }
+nav .faerdig .tal { color: var(--godt); }
+nav .faerdig .navn { color: var(--svag); }
+/* Søgninger med numre uden karakter: tydeligt mærke "N mangler" */
+nav .i-gang .tal, nav .ikke-startet .tal { color: var(--bg); background: var(--accent); border-radius: 999px;
+  padding: 0 7px; font-weight: 700; align-self: center; }
+nav .ikke-startet .tal { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+nav button.i-gang:not(.valgt), nav button.ikke-startet:not(.valgt) { box-shadow: inset 3px 0 0 var(--accent); }
+/* Numre uden karakter i den aktive søgning */
+/* Numre uden karakter, der hverken spiller eller er valgt: ingen ramme, kun en tynd skillelinje (Steffen) –
+   så nummeret, der spiller, skiller sig tydeligt ud. */
+.raekke:not([data-k]):not(.spiller):not(.fokus) { background: transparent; border-color: transparent;
+  border-bottom-color: var(--streg); border-radius: 0; margin: 0; }
+.raekke:not([data-k]) .nr::after { content: "•"; color: var(--accent); margin-left: 2px; }
+.mangler-maerke { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--accent); border: 1px dashed var(--accent); border-radius: 999px; padding: 0 7px;
+  vertical-align: 2px; }
+.raekke[data-k] .mangler-maerke { display: none; }
+nav .type { grid-column: 1 / -1; font-size: 11px; color: var(--svag); text-transform: uppercase; letter-spacing: .05em; }
+section { padding: 22px 28px 60px; max-width: 980px; }
+.chip { display: inline-block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 2px 9px; }
+.chip.sprog-da, .chip.sprog-en { margin-left: 6px; font-weight: 700; }
+.chip.sprog-da { color: var(--nej); border-color: var(--nej); }
+.chip.sprog-en { color: var(--praecis); border-color: var(--praecis); }
+.kunde { font-size: 22px; line-height: 1.35; margin: 10px 0 6px; font-weight: 600; }
+/* Søgningen (og referencen) bliver stående under toppen, mens man scroller i numrene. */
+.prompt { position: sticky; top: var(--hoved, 66px); z-index: 4; background: var(--bg);
+  margin: -22px -28px 0; padding: 18px 28px 12px; border-bottom: 1px solid var(--streg);
+  box-shadow: 0 10px 14px -10px rgba(0, 0, 0, .8); }
+.prompt .kunde { max-height: 7.5em; overflow-y: auto; }
+.prompt .reference { margin-bottom: 0; }
+.raekke { scroll-margin-top: var(--fast, 220px); }
+.motor { color: var(--svag); font-size: 13px; margin: 0 0 14px; }
+.vejledning { color: var(--svag); font-size: 13px; margin: 14px 0 10px; }
+.vejledning .spoerg { display: block; color: var(--tekst); font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.reference { display: flex; gap: 12px; align-items: center; background: var(--flade2); border-radius: 10px;
+  padding: 10px 14px; margin: 8px 0 4px; }
+.reference .titel { font-weight: 600; }
+.raekke { display: grid; grid-template-columns: 34px 40px 1fr auto; gap: 12px; align-items: center;
+  background: var(--flade); border: 1px solid var(--streg); border-radius: 10px; padding: 10px 12px; margin: 8px 0;
+  position: relative; overflow: hidden; }
+.raekke.fokus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.raekke.spiller { background: var(--spiller); }
+.nr { color: var(--svag); font-variant-numeric: tabular-nums; text-align: right; }
+.afspil { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--streg); background: var(--flade2);
+  display: grid; place-items: center; }
+.afspil:hover { border-color: var(--accent); }
+.afspil svg { width: 14px; height: 14px; fill: currentColor; }
+.titel { font-weight: 600; overflow-wrap: anywhere; }
+.kode { font-size: 11px; color: var(--svag); border: 1px solid var(--streg); border-radius: 4px; padding: 0 5px;
+  margin-right: 6px; font-weight: 400; white-space: nowrap; }
+.info { color: var(--svag); font-size: 12px; }
+.info a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+.karakter { display: flex; gap: 6px; }
+.karakter button { border: 1px solid var(--streg); background: var(--flade); border-radius: 8px; padding: 6px 11px;
+  font-size: 13px; min-width: 70px; }
+.karakter button:hover { border-color: var(--svag); }
+/* Hver karakter har sin farve; den valgte knap og hele rækken farves, så det er tydeligt, at nummeret er bedømt. */
+[data-k=praecis] { --k: var(--praecis); --k-bg: var(--praecis-bg); }
+[data-k=godt] { --k: var(--godt); --k-bg: var(--godt-bg); }
+[data-k=delvist] { --k: var(--delvist); --k-bg: var(--delvist-bg); }
+[data-k=nej] { --k: var(--nej); --k-bg: var(--nej-bg); }
+.karakter button[aria-pressed=true] { background: var(--k); border-color: var(--k); color: var(--flade); font-weight: 700; }
+.raekke[data-k] { background: var(--k-bg); border-color: var(--k); border-left: 6px solid var(--k); padding-left: 7px; }
+.raekke[data-k] .nr { color: var(--k); font-weight: 700; }
+.raekke[data-k] .karakter button[aria-pressed=false] { opacity: .55; }
+.valgt-karakter { display: none; margin-left: 8px; font-size: 11px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--k); border: 1px solid var(--k); border-radius: 999px; padding: 1px 8px;
+  vertical-align: 2px; }
+.raekke[data-k] .valgt-karakter { display: inline-block; }
+.forloeb { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); width: 0; }
+.raekke.har-boelge .forloeb { display: none; }
+canvas.boelge { display: block; width: 100%; height: 34px; cursor: pointer; }
+.raekke canvas.boelge { grid-column: 2 / -1; }
+.reference { flex-wrap: wrap; }
+.reference canvas.boelge { flex: 1 0 100%; height: 28px; }
+.bund { display: flex; gap: 10px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+.bund label { color: var(--svag); font-size: 13px; margin-left: auto; }
+.taster { color: var(--svag); font-size: 12px; margin-top: 14px; }
+kbd { border: 1px solid var(--streg); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font: 11px ui-monospace, monospace; }
+table { border-collapse: collapse; width: 100%; margin: 14px 0; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--streg); }
+th { font-size: 12px; color: var(--svag); text-transform: uppercase; letter-spacing: .05em; font-weight: 500; }
+td.stor { font-size: 20px; font-weight: 700; }
+.forklaring { color: var(--svag); font-size: 13px; }
+.tom { color: var(--svag); padding: 40px 0; }
+.m-app, .m-menu { display: none; }
+/* Mobil som en app (Steffen 2026-10-24): ét nummer ad gangen, karakterknapper ved tommelfingeren, en lille
+   skærm mellem søgningerne. Slår til på smalle skærme (html.mobil) – computeren er uændret. */
+html.mobil header, html.mobil nav { display: none; }
+html.mobil main { display: block; min-height: 0; }
+html.mobil section { padding: 0; max-width: none; }
+html.mobil .m-app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.m-bjaelke { height: 3px; background: var(--flade2); flex: none; }
+.m-bjaelke i { display: block; height: 100%; background: var(--accent); }
+.m-linje { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 0; color: var(--svag);
+  font-size: 13px; }
+.m-ikon { width: 44px; height: 44px; border: 0; background: none; color: var(--tekst); display: grid; place-items: center; }
+.m-ikon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.m-ikon:disabled { opacity: .25; }
+.m-soeg { padding: 0 16px 12px; border-bottom: 1px solid var(--streg); flex: none; }
+/* Kundens tekst er det vigtigste på skærmen; nummerets titel er nedtonet, så testeren ikke dømmer efter titlen (Steffen) */
+.m-soeg .m-etiket { color: var(--accent); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin: 2px 0 4px; }
+.m-soeg .kunde { font-size: 22px; line-height: 1.3; font-weight: 700; color: #ece6dc; margin: 0; max-height: 6.6em; overflow-y: auto; }
+.m-soeg .reference { margin: 10px 0 0; padding: 8px 10px; text-align: left; }
+.m-midte { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 4px; }
+.m-tael { color: var(--svag); font-size: 13px; }
+.m-prikker { display: flex; flex-wrap: wrap; justify-content: center; margin: 2px 0 10px; }
+.m-prikker button { width: 22px; height: 22px; border: 0; background: none; padding: 0; display: grid; place-items: center; }
+.m-prikker i { display: block; width: 7px; height: 7px; border-radius: 4px; background: #34343b; transition: width .2s; }
+.m-prikker [data-kk=praecis] i { background: var(--praecis); } .m-prikker [data-kk=godt] i { background: var(--godt); }
+.m-prikker [data-kk=delvist] i { background: var(--delvist); } .m-prikker [data-kk=nej] i { background: var(--nej); }
+.m-prikker .nu i { width: 18px; background: var(--accent); }
+.m-titel { font-size: 14px; font-weight: 500; color: var(--svag); overflow-wrap: anywhere; line-height: 1.3; }
+.m-titel .kode { display: none; }
+.m-kunstner { color: var(--svag); font-size: 12px; opacity: .8; }
+.m-afspil { width: 76px; height: 76px; border-radius: 50%; border: 0; background: var(--accent); color: var(--bg);
+  display: grid; place-items: center; margin: 16px 0 12px; flex: none; }
+.m-afspil svg { width: 28px; height: 28px; fill: currentColor; }
+.m-midte canvas.boelge { height: 60px; width: 100%; flex: none; }
+.m-tider { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.m-lille { border: 1px solid var(--streg); background: var(--flade); border-radius: 999px; padding: 8px 14px;
+  font-size: 13px; color: var(--svag); }
+.m-valgt { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--k); border: 1px solid var(--k); border-radius: 999px; padding: 2px 10px; }
+.m-spoerg { flex: none; text-align: center; color: var(--tekst); font-size: 17px; font-weight: 700; padding: 12px 0 2px;
+  border-top: 1px solid var(--streg); }
+.m-spoerg + .m-bund { border-top: 0; }
+.m-bund { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--streg);
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); }
+.m-bund button { height: 56px; border-radius: 12px; border: 1px solid var(--streg); background: var(--flade);
+  font-size: 16px; font-weight: 600; color: var(--k); }
+.m-bund button[aria-pressed=true] { background: var(--k); border-color: var(--k); color: var(--bg); }
+.m-faerdig { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 24px; text-align: center; }
+.m-flueben { font-size: 34px; color: var(--godt); line-height: 1; }
+.m-faerdig h2 { margin: 6px 0 0; font-size: 21px; }
+.m-faerdig .bjaelke { width: 100%; margin: 18px 0 4px; }
+.m-knapper { flex: none; display: grid; gap: 8px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); }
+.m-knapper .knap { height: 52px; font-size: 16px; border-radius: 12px; }
+html.mobil .m-menu.aaben { display: block; position: fixed; inset: 0; z-index: 40; background: var(--bg);
+  overflow-y: auto; padding: 0 0 calc(20px + env(safe-area-inset-bottom)); }
+.m-menu h3 { font-size: 12px; color: var(--svag); text-transform: uppercase; letter-spacing: .06em; margin: 18px 16px 6px; }
+.m-menu .m-punkt { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; border: 0;
+  border-bottom: 1px solid var(--streg); background: none; padding: 13px 16px; font-size: 15px; }
+.m-menu .m-punkt.nu { background: var(--accent-bg); }
+.m-menu .m-punkt small { color: var(--svag); white-space: nowrap; }
+.m-menu .m-punkt.faerdig small { color: var(--godt); }
+.m-menu p { color: var(--svag); font-size: 14px; margin: 0 16px 10px; }
+.m-menu .knap { margin: 8px 16px 0; width: calc(100% - 32px); height: 50px; font-size: 16px; border-radius: 12px; }
+</style>
+<link rel="icon" type="image/png" href="../billeder/favicon-3.png">
+<link rel="apple-touch-icon" href="../billeder/ikon-180-3.png">
+<meta name="description" content="Hjælp Frankly My Dear med at finde den bedste musik til film: lyt og bedøm. Du kan holde pause undervejs.">
+<meta property="og:site_name" content="Frankly My Dear">
+<meta property="og:title" content="Frankly My Dear · Blindtest">
+<meta property="og:description" content="Lyt og bedøm musik – hjælp os med at finde den bedste musik til film.">
+<meta property="og:url" content="https://blindtest.franklymydear.dk/mr-4j-63eeb9ff/">
+<meta property="og:image" content="https://blindtest.franklymydear.dk/billeder/forhaandsvisning-5.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Frankly My Dear · Blindtest – lyt, og bedøm om musikken passer til søgningen">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#2f2f2f">
+<script>window.FMD_DATA = {"runde":"4j","navn":"Mini-runde: Pakke 1 (to ører + færre gengangere)","udgave":"","version":"2026-11-01","modtager":"steffen@franklymydear.dk","ikon":"../billeder/ikon-192-3.png","skala":[["praecis","Spot on",3],["godt","Ok",2],["delvist","Delvist",1],["nej","Slet ikke",0]],"spoergsmaal":"Matcher nummeret søgningen?","tegn":"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_","puljer":[{"id":"i01","type":"kort","sprog":"da","kunde":"hærg","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"p9lifyw846e4asyzqkotlevz","titel":"Jean Pierre","kilde":"Tomas Raae","varighed":178,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--V1gDKVT0--/f_mp3,t_internalformat/v1/tracks/wy9cgy5kpl9ou5bo9te4we58"},{"id":"zxp4whavfuth4gd0sskbrmhq","titel":"Halfdans","kilde":"Jullie Hjetland","varighed":157,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--QKyHGvXu--/f_mp3,t_internalformat/v1/tracks/yasn5664a61amlj8wprvo0zk"},{"id":"iw966em3sjlbbark2x6qujy0","titel":"Signposts","kilde":"Kala-OK, Kristian Mondrup","varighed":203,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--J5J8cDSn--/f_mp3,t_internalformat/v1/tracks/nc9dim9qgicucdi3jh77qgph"},{"id":"cmc3owxsqzvw9axz3xvti6nc","titel":"Walking a Lot","kilde":"Howl Baby Howl","varighed":210,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--90-W8Svz--/f_mp3,t_internalformat/v1/tracks/na2293j7bgomek57j54xhp1l"},{"id":"ho6svwpvp4cwbl1qfvmdw2uk","titel":"Screaming Tears","kilde":"Peter K. Nørgaard","varighed":58,"start":14.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--PCYCvzjt--/f_mp3,t_internalformat/v1/tracks/mj0vgsijdzn6hvmf5ojf6vqn"},{"id":"qiiec95nuxgcmxgbhs24pkx1","titel":"EVERYTHING IS DRUGS PT. 2","kilde":"Frederik Valentin","varighed":360,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--qJgoxQZp--/f_mp3,t_internalformat/v1/tracks/hhrdrgsaocp56zj5f4skdzbt"},{"id":"n5wjxgxp4f46fntz0xaxpl4u","titel":"Vi Dræber Mørket","kilde":"Howl Baby Howl","varighed":130,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--Pe5ihyat--/f_mp3,t_internalformat/v1/tracks/ai53kfvzy1zjh14ljaltd8vv"},{"id":"v1b40rv16q19rcihmejg0u81","titel":"4AM al Buio (Prod. 2020 & SNDY)","kilde":"Milez","varighed":165,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--E76ZW5s0--/f_mp3,t_internalformat/v1/tracks/cvoj3tnaiqorl7b3jkgh5k9e"}]},{"id":"i02","type":"kort","sprog":"da","kunde":"Trædeorgel","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"z109vgif9gld57o92tzopzbj","titel":"Bright and atmospheric organs chords","kilde":"Ground Glass ","varighed":126,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--RwbPcBTy--/f_mp3,t_internalformat/v1/tracks/gkaar1m34f354ts5ezqsyl8q"},{"id":"xqqgiox1v505hdnghc0j5m2l","titel":"WATER","kilde":"Frederik Valentin","varighed":236,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--tvG6zGQO--/f_mp3,t_internalformat/v1/tracks/x33zgw6i4njv9zj280r0889i"},{"id":"pkszoob0wmdv63229jw2ydy6","titel":"Wuap","kilde":"Anders 'Ormen' Christophersen","varighed":188,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--AoV-Xm9T--/f_mp3,t_internalformat/v1/tracks/pu79auz9wrleymsu6byau8td"},{"id":"pp5o8kor77ff6vrmeylzdei5","titel":"TIME","kilde":"Frederik Valentin","varighed":127,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--LfW3GfK_--/f_mp3,t_internalformat/v1/tracks/aj9v5q2lbyv3r1g49imoolk5"},{"id":"v5s3906euq87dtx5t2asxfd4","titel":"Sea Trout (Instrumental)","kilde":"Anders 'Ormen' Christophersen","varighed":170,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--oLbtLX6K--/f_mp3,t_internalformat/v1/tracks/lr5p6pj23juw8fon543zls1n"},{"id":"taq0iewg81b5xsuoob3uadpy","titel":"In Oslo","kilde":"Halfdan E","varighed":214,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--KzHoqp6A--/f_mp3,t_internalformat/v1/tracks/uxnb7839g4ys9w3yhn0qiqrx"},{"id":"fn0wyufg3sw34wappgitrlp3","titel":"De høyre Nykjen på havets skrei","kilde":"Basco","varighed":57,"start":14.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--kJtPyWu3--/f_mp3,t_internalformat/v1/tracks/eamc9lsrtudtimxh9n31c9bz"}]},{"id":"i04","type":"kort","sprog":"da","kunde":"rasende og ulykkelig","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"qiiec95nuxgcmxgbhs24pkx1","titel":"EVERYTHING IS DRUGS PT. 2","kilde":"Frederik Valentin","varighed":360,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--qJgoxQZp--/f_mp3,t_internalformat/v1/tracks/hhrdrgsaocp56zj5f4skdzbt"},{"id":"pk5adguxkjaf7nt8pxjxtlut","titel":"WhatNow","kilde":"Christian Balvig","varighed":124,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--pCnzyJB---/f_mp3,t_internalformat/v1/tracks/pqsqycsajz6izcj30g3ldrrj"},{"id":"ibt6zq31y2268c55sotp2vrf","titel":"The Frightful Symbol","kilde":"Manoj Ramdas","varighed":53,"start":13.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--AyUSwWYu--/f_mp3,t_internalformat/v1/tracks/i48ojcu7jlwlo5em29jt2foy"},{"id":"oz2oj6x0symu76qxg96fqnmq","titel":"Betelgeuse","kilde":"Sebastian Zawadzki","varighed":306,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--b2FCJ1eD--/f_mp3,t_internalformat/v1/tracks/guuaa60g5tew2yx1nl9nneme"},{"id":"c872te4ditcbu18369ni8rqv","titel":"So Blind","kilde":"Howl Baby Howl","varighed":242,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--BaxDQYU7--/f_mp3,t_internalformat/v1/tracks/agbs1p737sl83zzfomqtfijz"},{"id":"y8sget0b9g4vdr16kz830ns5","titel":"KNULLA MED DEG","kilde":"Lesbisk Pik","varighed":145,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--qCdjFVPc--/f_mp3,t_internalformat/v1/tracks/pwh3yg3ya7n7edgneg8yeyxy"},{"id":"f9uhjxd9547it6636t9ynmxe","titel":"Tasman","kilde":"PUGET SOUND","varighed":58,"start":14.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--dtPYvrEe--/f_mp3,t_internalformat/v1/tracks/qy5u38e9c537npq7hpbn1c69"},{"id":"nacipfq5navhreri62o4is6s","titel":"Gudrunds solo","kilde":"Jens Bjørnkjær","varighed":173,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s---Q1qE6fI--/f_mp3,t_internalformat/v1/tracks/s0boq7o6suqagveg5g2fzlzp"}]},{"id":"i06","type":"tekst","sprog":"da","kunde":"umuligt at vide når man er så ung","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"g1vnr78qi3jyuozv0dkq6gqd","titel":"Water Woman (gtrs)","kilde":"Alpas Ave","varighed":240,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--dDX10_8m--/f_mp3,t_internalformat/v1/tracks/inha9ltoobia077nrma3fpss"},{"id":"gptkvjbkeskrccjfqwh7a2s1","titel":"Det Jeg Allerede Har","kilde":"Mathilde Falch","varighed":262,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--Gr7rmYap--/f_mp3,t_internalformat/v1/tracks/ostuhilvx57xv8dthry0m76d"},{"id":"on7yavvxfjfh2jom6mnyet0r","titel":"Someday","kilde":"Death Machine","varighed":238,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--KT5CaCIk--/f_mp3,t_internalformat/v1/tracks/wx0fff1qi53a175x4cha0ex7"},{"id":"uqxyxvbkg6eyive8q2tf2l10","titel":"Bleak","kilde":"Death Machine","varighed":229,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--ZuLp-PcB--/f_mp3,t_internalformat/v1/tracks/pkl7ip2msqtkyorpxjeomwjp"},{"id":"ss7c20bs92n0bff0bgd9v5e8","titel":"Anything Can Happen (acoustic version)","kilde":"D. Henry","varighed":163,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--4PZ37cEM--/f_mp3,t_internalformat/v1/tracks/dfma60bnzav039faxsnvf7ca"},{"id":"hqs0l90smtdgkrs1l3lzbipw","titel":"Become The Dead","kilde":"Death Machine","varighed":182,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--qcbmaDwt--/f_mp3,t_internalformat/v1/tracks/v4hl67nqyb420jh5ew38zy1w"},{"id":"sirj6akt1j5awtqfhpcppu65","titel":"Bring It Back","kilde":"Death Machine","varighed":178,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--DqQDjo3c--/f_mp3,t_internalformat/v1/tracks/jrc2t10bn0zjfx211p7swlho"},{"id":"qjjouq59wkq1fn59fpjptlmv","titel":"The Waiting Room","kilde":"Death Machine","varighed":199,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--aqwDXirl--/f_mp3,t_internalformat/v1/tracks/pgygm574qwyiy2zu2fmx4p6a"}]},{"id":"i07","type":"tekst","sprog":"da","kunde":"jeg råbte og skreg af lykke","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"gj3cw48znx53x6zlbaccli9s","titel":"Agora","kilde":"Mikael Tobias","varighed":293,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--dqQJ0Nit--/f_mp3,t_internalformat/v1/tracks/mp4ytdsol4f7c5vufcvimdkx"},{"id":"dfmfca8c6qajem3yfsfbs4jo","titel":"Frit Fald (Instrumental)","kilde":"Asger Møller","varighed":244,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--dsF4-gIw--/f_mp3,t_internalformat/v1/tracks/s4dhpij7enf2so1u0sg8kzlw"},{"id":"ai5efdleqe31db0486zugstb","titel":"True Lies","kilde":"Toby Ernest","varighed":214,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--PmbgQGGn--/f_mp3,t_internalformat/v1/tracks/ubbjevdudnzj35th7va9ded1"},{"id":"b1tl7edlvncr189dlni0bycm","titel":"01 Hvad kan du få penge for","kilde":"Følsom Front","varighed":235,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--TX-Eri2Y--/f_mp3,t_internalformat/v1/tracks/g0lh3qlga9epwdmz7nsyixrb"},{"id":"qpm9kd4crcky9tf8bxlkxpcz","titel":"Sixfiftyone","kilde":"Mikael Tobias","varighed":397,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--H1HlYgJ---/f_mp3,t_internalformat/v1/tracks/aeqc5z5low3kq45k5u8jy7pg"},{"id":"kyd8rk1w3xoit0ez6xa0jt3s","titel":"1971","kilde":"Søren Vestergaard","varighed":320,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--CmYg9pmH--/f_mp3,t_internalformat/v1/tracks/r4nbq6l1iy5ptnzg1p5sv5cd"},{"id":"d6srfv8fhf1ezv3nez0syhsm","titel":"Tokyo Fox","kilde":"Deb Foam","varighed":307,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--wSpmcbv---/f_mp3,t_internalformat/v1/tracks/v8subzsd5bcz2h56cy5etkrf"}]},{"id":"i09","type":"kort","sprog":"en","kunde":"hunted","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"vjzdqyxde1v3980xxtk3fz2y","titel":"031 - 8 min of Action and suspence","kilde":"Mons Niklas Schak, Tin Soheili","varighed":450,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--bR2iLHjY--/f_mp3,t_internalformat/v1/tracks/i59445qg6hsup67p1buy96r2"},{"id":"i5nkuwn2zh5l8vfz0rsdx9e4","titel":"06 - Abstrakt puls 1","kilde":"Mons Niklas Schak, Tin Soheili","varighed":216,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--6jSvrxhJ--/f_mp3,t_internalformat/v1/tracks/cbr87ybxhtdqwu7137kvzxnq"},{"id":"qjw4ulaxb2zzta51np1mvj54","titel":"045 - Deep storage Op 3","kilde":"Mons Niklas Schak, Tin Soheili","varighed":176,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--1klADjHt--/f_mp3,t_internalformat/v1/tracks/z720yakpu1gbvpibjvtj5loi"},{"id":"ja77fvtwsqp015fvdqdp2e4p","titel":"Only The Informed","kilde":"Dennis Lee","varighed":142,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--IihDeaCb--/f_mp3,t_internalformat/v1/tracks/bkdc1lrli798l14dlea4u134"},{"id":"tbkyg6greqbc62ftbg2cnzq0","titel":"SpyOpsVox","kilde":"Christian Balvig","varighed":152,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--mkbArRd9--/f_mp3,t_internalformat/v1/tracks/gsl6vqklw2y2czwv1s0288t2"},{"id":"p0ffv6ohvxze48k40jjcfa2z","titel":"039 - Clear Suspence op 8","kilde":"Mons Niklas Schak, Tin Soheili","varighed":26,"start":6.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--fayOeLgq--/f_mp3,t_internalformat/v1/tracks/wr8e10j1jpj73sfgf21jxzes"},{"id":"lw48cb1e039p3osgrhkpo8jp","titel":"Dream Or Real","kilde":"Dennis Lee","varighed":192,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--AIiSgfEp--/f_mp3,t_internalformat/v1/tracks/qofq9sj4daj12ve6miwh6kn5"},{"id":"l62ejqh8pz237rwpely8fmmz","titel":"Wild Girl Montage op 01","kilde":"Steffen Breum","varighed":112,"start":28.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--1Xw9Cw9T--/f_mp3,t_internalformat/v1/tracks/yh07z8k4pv3jh4xzav57wfq0"},{"id":"weuz2v49ynh06xg4ymf72y4n","titel":"037 - Clear Suspence op 6","kilde":"Mons Niklas Schak, Tin Soheili","varighed":116,"start":29.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--8KY7ILUg--/f_mp3,t_internalformat/v1/tracks/szhhzt2fmfxvvocyhpnnfnu3"}]},{"id":"i10","type":"kort","sprog":"en","kunde":"melankoli","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"vcb7aiklyq78zcf5y9dbxalb","titel":"The Conglomerat - Waiting V1","kilde":"Christian Balvig, Jesper Elnegaard","varighed":98,"start":24.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--2T62JZYO--/f_mp3,t_internalformat/v1/tracks/y0yqwrxry79v3ifg6v2q6sf5"},{"id":"sm2v83cgm2vqvd01wznezy1b","titel":"THEME LOTS","kilde":"Peder, Asger Baden","varighed":194,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--v5HLZEv3--/f_mp3,t_internalformat/v1/tracks/v0i9i0ayuc8psup50v8nrcwc"},{"id":"s1jwv69bhaw7yup44ku6ew09","titel":"Ghost Town (long version)","kilde":"Charlie Alexander","varighed":199,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--PCGFMrDp--/f_mp3,t_internalformat/v1/tracks/d68keyimapuj7o6hm9qa0ocp"},{"id":"ftcxckyl11m0ur3f84i2z0e3","titel":"Norn","kilde":"Sebastian Zawadzki","varighed":364,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--fEjGhBKg--/f_mp3,t_internalformat/v1/tracks/cmbyrfwecdm2drnipc7simdp"},{"id":"g0m7cjjbvp0nfi5u2dbyg4pk","titel":"Perceptions","kilde":"Sebastian Zawadzki","varighed":172,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--XqgPXFJC--/f_mp3,t_internalformat/v1/tracks/vcrijer7ibypcml0fm3ejx1n"},{"id":"vtkgol7ssumaqx2j2r1d4sbo","titel":"One Side of Me","kilde":"Sebastian Zawadzki","varighed":522,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--x5rDZ7vK--/f_mp3,t_internalformat/v1/tracks/vcz3te6u3cbe4ins4zpbhwja"},{"id":"e9p8sq68pz0nr1wxaycrpe0k","titel":"Change Of Season","kilde":"Dennis Lee","varighed":204,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--JzrB_e2h--/f_mp3,t_internalformat/v1/tracks/yfnp1qaubdfvt1lslqinlrt7"}]},{"id":"i11","type":"kort","sprog":"en","kunde":"arabic","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"iz1n7h1vcryj6u2fhdfmfcxi","titel":"Blues for the Oud","kilde":"Rasmus Møldrup","varighed":229,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--mmZ-skGs--/f_mp3,t_internalformat/v1/tracks/v75tbn3fif73mp51oye9hyji"},{"id":"u2mpxhbpyuvn3afij0ze9vo3","titel":"Heimo","kilde":"Basco, Jullie Hjetland","varighed":313,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--MMIUB09f--/f_mp3,t_internalformat/v1/tracks/dmv7z7jfb8aod5f9afnsz09p"},{"id":"uymhgvteu1iiaxter1ogr2xb","titel":"SamSam","kilde":"Christian Vinten","varighed":113,"start":28.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--pEfZRYzx--/f_mp3,t_internalformat/v1/tracks/loi9i41axaimlykw52d80ydz"},{"id":"tli77207qkqxhaxmivay2kex","titel":"MEHICO (w INTRO)","kilde":"Peder, Asger Baden","varighed":44,"start":11.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--Tpl0Y5wZ--/f_mp3,t_internalformat/v1/tracks/abkdlt6784om4j9pvccsaf8s"},{"id":"q4lab03cl8v7wvmqsl42tk4v","titel":"Running Wild","kilde":"Andreas Busk","varighed":77,"start":19.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--H9RQE8SF--/f_mp3,t_internalformat/v1/tracks/izz8kcw6nter9an8iku2417r"}]},{"id":"i14","type":"kort","sprog":"en","kunde":"a hawaii","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"drku3su4aaanxakw4nmddr0v","titel":"Across the Sky","kilde":"Mikael Tobias","varighed":68,"start":17.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--OFgfHTm1--/f_mp3,t_internalformat/v1/tracks/fio36iqzxo8s3mwf7l046t8v"},{"id":"tyonu2olzl6wihci0avdo3im","titel":"Afrik 02 Township","kilde":"Halfdan E","varighed":80,"start":20.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--irL8zw3---/f_mp3,t_internalformat/v1/tracks/a3p2uewjpjs4dj9tnalmn55r"},{"id":"winjkkc652g4gertc7150y3x","titel":"HAMSTER","kilde":"Peder, Asger Baden","varighed":66,"start":16.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--YNvfomG_--/f_mp3,t_internalformat/v1/tracks/rrkryiczqd3yybhzu1236sbp"},{"id":"xx81keampqxnqs8h47xatern","titel":"HAWAII","kilde":"Peder, Asger Baden","varighed":105,"start":26.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--LWwa9Obf--/f_mp3,t_internalformat/v1/tracks/dl1keepx8d1wntf0w7zrzqp2"},{"id":"mal7okjcj7y22uued2mqqjsd","titel":"On a Good Note","kilde":"Rasmus Møldrup","varighed":178,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--47BFECRa--/f_mp3,t_internalformat/v1/tracks/j1ujdrqahp6rt5txsq157knl"}]},{"id":"i15","type":"kort","sprog":"en","kunde":"Indinerne bliver sure","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"dy3lgsfqx56djzalrk6r51gu","titel":"Ten-Hut","kilde":"Charlie Alexander","varighed":199,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s---j7kw87E--/f_mp3,t_internalformat/v1/tracks/oaueq2hro2s58patn5qn1upy"},{"id":"uoivuv3fxeg1q5tne7194sr3","titel":"Here They Come","kilde":"Casper Belmaati","varighed":146,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--Oz2dayBR--/f_mp3,t_internalformat/v1/tracks/bpwvownpq3ds4uvl9pxf1pu1"},{"id":"j5goa5eze6arlttt3zilahui","titel":"Mørkeræd (EasternTheme)","kilde":"Christian Balvig","varighed":164,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--ANbEziDC--/f_mp3,t_internalformat/v1/tracks/so0vfp0exy7u8520beu2fd0h"},{"id":"fk9s3dn3phi3ujghterqbz19","titel":"Synth Score","kilde":"Simon Littauer","varighed":33,"start":8.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--hXSjeyJD--/f_mp3,t_internalformat/v1/tracks/w7y1lgr3k2znj8revo1p2128"},{"id":"hw66pyxb6j9ll9z0b5w5ktpx","titel":"Doomes","kilde":"PUGET SOUND","varighed":52,"start":13.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--K1oEzPIU--/f_mp3,t_internalformat/v1/tracks/myf1vprshydwjsyyq6b21htm"},{"id":"pgd2pwuh3j2vd5sf5vijidqu","titel":"The Tank","kilde":"Charlie Alexander","varighed":231,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--_VPiJS3w--/f_mp3,t_internalformat/v1/tracks/eqrmiffc698ysu5eg2gifb6e"},{"id":"f9uhjxd9547it6636t9ynmxe","titel":"Tasman","kilde":"PUGET SOUND","varighed":58,"start":14.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--dtPYvrEe--/f_mp3,t_internalformat/v1/tracks/qy5u38e9c537npq7hpbn1c69"}]},{"id":"i17","type":"kort","sprog":"en","kunde":"happy ambience","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"qytg829wh40m6mubamrwr95j","titel":"HUND","kilde":"Peder, Asger Baden","varighed":73,"start":18.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--QhFvknwF--/f_mp3,t_internalformat/v1/tracks/y9o34j3hxb8uuruy9a3505um"},{"id":"xiew6lxkitfxdsvtw8h3bmyi","titel":"Childs Play","kilde":"Charlie Alexander","varighed":96,"start":24.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--7smeHkJ4--/f_mp3,t_internalformat/v1/tracks/hyoth4r38qjwo10syp2m8vzw"},{"id":"nfac55op6rxwbe50mu3wi767","titel":"PADBeat","kilde":"Marcus Toft","varighed":43,"start":10.8,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--i_H4ODBV--/f_mp3,t_internalformat/v1/tracks/p4f2zmxaqe26cipkhlrqfr5j"},{"id":"xw82a3pnbax057lbiopi63qa","titel":"Parhelion","kilde":"Yoker Moon","varighed":313,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--wnFialj6--/f_mp3,t_internalformat/v1/tracks/h9l1j9f402c6ewuypphm3ihl"},{"id":"yb1jgpfqksr0g9shkbn0h2it","titel":"Meet Carla","kilde":"Jesper Hansen","varighed":69,"start":17.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--CyrCovrW--/f_mp3,t_internalformat/v1/tracks/l37kcudc383cbj0dpat76src"},{"id":"ooo3qjgdw7a5n6zgwqan0cqn","titel":"Darkness Falls","kilde":"Mickie Wriedt ","varighed":152,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--CqC_8yGx--/f_mp3,t_internalformat/v1/tracks/whljrbnbo9rppoxse1bw0m74"},{"id":"n6kb5aa3zxi67zlc4rfadhlo","titel":"Hope v4 (GisliGaldur)","kilde":"Gisli Galdur","varighed":192,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s---LdH5kt8--/f_mp3,t_internalformat/v1/tracks/oy2f3ksgqfxz7z4t2ffi9jyd"},{"id":"ocat8xbb3h7dupyim3vlla25","titel":"The Mountains & Peaks","kilde":"Finland & Aaskoven","varighed":364,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--iiUt-DmV--/f_mp3,t_internalformat/v1/tracks/cspj1gayrzxrxz7qssiqh0lb"}]},{"id":"i18","type":"tekst","sprog":"en","kunde":"pulsating and forward moving. positive. acoustic.","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"n33ijf1414qgtcbwhbcu9apf","titel":"Belle","kilde":"Charlie Alexander","varighed":140,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--SA3iC-K5--/f_mp3,t_internalformat/v1/tracks/dd05z4emjamf969rkv5rxxrv"},{"id":"vu1y4lzrareiez83adhagsdo","titel":"Don't Be Scared","kilde":"Vilhelm","varighed":197,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--McMiK3kQ--/f_mp3,t_internalformat/v1/tracks/p7ic0sg9l034mq9drir4pmp5"},{"id":"tevmwexeh4zc7rql3ofxfg05","titel":"Medvind (instrumental)","kilde":"Lunau & Sund","varighed":194,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--llCoBbfj--/f_mp3,t_internalformat/v1/tracks/pn0pikne3pft967oxhut9hh6"},{"id":"rckbbih5dz6ym2ag77yqtqfi","titel":"Underworld (Instrumental)","kilde":"Joan Westgate","varighed":268,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--T7kel4sp--/f_mp3,t_internalformat/v1/tracks/vl0nadl0lqiqtjpv0lqaj2jb"},{"id":"xiew6lxkitfxdsvtw8h3bmyi","titel":"Childs Play","kilde":"Charlie Alexander","varighed":96,"start":24.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--7smeHkJ4--/f_mp3,t_internalformat/v1/tracks/hyoth4r38qjwo10syp2m8vzw"},{"id":"dqug0izu4irsy0ww4xhg8ha1","titel":"Bleak (Instrumental)","kilde":"Death Machine","varighed":229,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--R_5HYAJl--/f_mp3,t_internalformat/v1/tracks/ftp6xkh22j66i50ousemc905"},{"id":"l7piu7d9lf9md60gn9bjul97","titel":"En Sommernat (instrumental)","kilde":"Lunau & Sund","varighed":231,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--t8bUqOw---/f_mp3,t_internalformat/v1/tracks/f3xooq53ni96c7e3s68mztqc"},{"id":"m89t7s3xrida6g8y93l1vxru","titel":"Nu (instrumental)","kilde":"Lunau & Sund","varighed":242,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--Bv_apXgK--/f_mp3,t_internalformat/v1/tracks/dh2gqu386n4ucvf34lqzud0y"}]},{"id":"i19","type":"tekst","sprog":"en","kunde":"cool rhythmic music that sounds like a nike commercial","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"ljcnd0sif41s5f93t61w6hdq","titel":"Flintstones (Prod. Blanq Beatz) (Instrumental)","kilde":"Fundi Wake","varighed":117,"start":29.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--CxoTdCjg--/f_mp3,t_internalformat/v1/tracks/wdn6xatgk9kzw7q4heem48sw"},{"id":"vf0wj6fdp8jiaxojovj0szyz","titel":"Nindando - 2007 type timberland beat","kilde":"Tendo Herbst","varighed":164,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--Clg9OTmE--/f_mp3,t_internalformat/v1/tracks/g7cgjb085jxfwmuo1m9ep6ug"},{"id":"bpwi5aqnu820s0vfbs12gapa","titel":"Possession (Prod. 2020 & SNDY) (Instrumental)","kilde":"Milez","varighed":149,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--WLM6V4N_--/f_mp3,t_internalformat/v1/tracks/jz48v7qru7vwmiimztl31t5e"},{"id":"br5uanknhph65amzt6jzcpjt","titel":"Spear","kilde":"Oblique Motion","varighed":102,"start":25.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--zcEL6MWB--/f_mp3,t_internalformat/v1/tracks/kd2jb1wrcg3xcr2lzwu63k8j"},{"id":"s34h0ztczhxb6029ipehzvse","titel":"Kanye kruse dag V2","kilde":"Niels Kirk","varighed":200,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--FeodaOMw--/f_mp3,t_internalformat/v1/tracks/qstgaab3kc4nabnfvi7ue14j"},{"id":"u5zcg7i207ewgl0arohe8xqz","titel":"HEY HEY","kilde":"Christian Balvig","varighed":92,"start":23.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--jgoy_nJP--/f_mp3,t_internalformat/v1/tracks/j144bbrqxdhnd7aunmope8yh"}]},{"id":"i20","type":"tekst","sprog":"en","kunde":"dreamy, strings, chimes, airy","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"foakcm6fzed53ffm16kh85ek","titel":"Prelude Mila","kilde":"Tin Soheili","varighed":55,"start":13.8,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--v_o3fqN8--/f_mp3,t_internalformat/v1/tracks/w96e195jhl39hb8s0vob31ln"},{"id":"x6vqlcpzp3tpbt7i8uhekjyc","titel":"Soft Spot Drone","kilde":"Halfdan E","varighed":76,"start":19.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--ZhZd8oKj--/f_mp3,t_internalformat/v1/tracks/n2felggnajm09w0x58kmmww9"},{"id":"mn4g5usxw92sowp0uevsfbhk","titel":"True North","kilde":"Lasse Aagaard","varighed":109,"start":27.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--Ijt5Gw5P--/f_mp3,t_internalformat/v1/tracks/zl95v8k1lf6n22i532rp9s4p"},{"id":"q0co2p6we00u5bereozzq67x","titel":"Mellow (V3)","kilde":"Casper Belmaati","varighed":69,"start":17.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--MHi38fHa--/f_mp3,t_internalformat/v1/tracks/n9ifiujl5dfpbxir8mgwvsdd"},{"id":"upijcof3rto1x4py5lo6mb2o","titel":"ARP5","kilde":"Peder, Asger Baden","varighed":144,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--yPmkb-XX--/f_mp3,t_internalformat/v1/tracks/t0j42jr2enmv3n75peml7rp0"},{"id":"li6q53ylp1d4mdwvygzycs59","titel":"Water Garden","kilde":"PUGET SOUND","varighed":580,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--6TfEvJed--/f_mp3,t_internalformat/v1/tracks/jjor7ystltksac1mwefblq30"},{"id":"kgxfnjh53ss9q8tsueys9il1","titel":"DAYLIFEMAGIC","kilde":"Peder, Asger Baden","varighed":105,"start":26.2,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--gGuTBkz3--/f_mp3,t_internalformat/v1/tracks/bqjudng8wmkt7mb9ybuo1064"}]},{"id":"i12","type":"tekst","sprog":"en","kunde":"music for a slaughterhouse that isnt scary but with a light undertone","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"xm5zfjgq7lz9soc4i6o1zbxx","titel":"OPENING","kilde":"Kristian Mondrup","varighed":68,"start":17.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--W3T7XNRa--/f_mp3,t_internalformat/v1/tracks/gkrf3hrt2isxr5uot62fqzvh"},{"id":"zco48v627g591r6tgu2vz8at","titel":"Gooks  Pre-listen","kilde":"Niels Kirk","varighed":108,"start":27.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--JI9BdLWG--/f_mp3,t_internalformat/v1/tracks/i2ab2zc4atlvia3uqjqyid2g"},{"id":"zvnhd7u0gpuiddojeabxs415","titel":"Lille Rummand","kilde":"Andreas Busk","varighed":235,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--nR2ML8Cj--/f_mp3,t_internalformat/v1/tracks/jipdzluznlldre6pr3b6j7p0"},{"id":"zdvsmqryp4gzgb74mwnlb0s7","titel":"Samuels Arrival","kilde":"Dennis Lee","varighed":223,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--M-5PRVuW--/f_mp3,t_internalformat/v1/tracks/uuwroug1oa66pcaodkumyln3"},{"id":"ch6pyw5ib7h82spuvf1y4b0v","titel":"GRAND 4","kilde":"Peder, Asger Baden","varighed":147,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--vg17qbQe--/f_mp3,t_internalformat/v1/tracks/cd59s01k43wbbkjv65b3p5hn"},{"id":"rw800rw1tnd74lqf34p4um7i","titel":"AM (MUSEUM)","kilde":"Peder, Asger Baden","varighed":143,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--7V3rDxwU--/f_mp3,t_internalformat/v1/tracks/v9pzr6ke8r3kxlby8vl75g8j"},{"id":"n5djeh1pe50ey5vs8nnj60y1","titel":"127 - The Judge","kilde":"Mons Niklas Schak, Tin Soheili","varighed":144,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--GK4tNBiw--/f_mp3,t_internalformat/v1/tracks/iskx6f6ufsauf8dyqr7pactt"},{"id":"c7u5h8zbdwyubv40rw8y71jh","titel":"Frustration","kilde":"Halfdan E","varighed":44,"start":11.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--BAkOFhk6--/f_mp3,t_internalformat/v1/tracks/pjt2bkna0dsy2jqdinijw7vz"}]},{"id":"i27","type":"kort","sprog":"en","kunde":"nature melancholic vibe","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"tfwkrate0o50d8lo80q57e8e","titel":"4 With The Dim The Darkness Came","kilde":"Tomas Raae","varighed":339,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--I81bKnBe--/f_mp3,t_internalformat/v1/tracks/kgqulmpzya9hcqx5h6dl0inn"},{"id":"u3wzz2irvyxrvlar00im18zf","titel":"Sonic Logo & On Hold Music","kilde":"Peter K. Nørgaard","varighed":90,"start":22.5,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--6NkjrOnN--/f_mp3,t_internalformat/v1/tracks/yw19nipef9yh1own57c6u5zf"},{"id":"ttwoexcxxipv4rn66wxhmls2","titel":"01 x7.3","kilde":"Tomas Raae","varighed":292,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--UaHaM1ii--/f_mp3,t_internalformat/v1/tracks/amsqnhmvov50pftzm2cdiw2c"},{"id":"ndpgzoxf9behtsorjpow0u1w","titel":"Vandtrapper","kilde":"Hannah Schneider","varighed":190,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--dJoiiqkg--/f_mp3,t_internalformat/v1/tracks/nn98tewpyegqs8pjzu248dii"},{"id":"l4es7uht4yqw7rzhaz3euf1o","titel":"Someday (Instrumental)","kilde":"Death Machine","varighed":237,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--C_zD64hO--/f_mp3,t_internalformat/v1/tracks/gt2tmm3woql7cq5dbet8zqnu"},{"id":"dubyucwob17g90pkani1gyp0","titel":"After The Thaw","kilde":"Mikael Tobias","varighed":241,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--2buFwdXD--/f_mp3,t_internalformat/v1/tracks/xyalnz8l3duqc59la8anoh2n"},{"id":"b7iu9c9ol547sm9c583x8aec","titel":"Ghost (Instrumental)","kilde":"Death Machine","varighed":201,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--o1zJsNz---/f_mp3,t_internalformat/v1/tracks/p344qhjggknc9fulemchla6k"},{"id":"efksaggxa1z2ovd0jfpmkdlt","titel":"The King Is Dead","kilde":"Dennis Lee","varighed":168,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--PhoQTjFP--/f_mp3,t_internalformat/v1/tracks/jbfvsys4ojb76565tatnjp9o"}]},{"id":"i28","type":"kort","sprog":"en","kunde":"chaotic jazz","skjulStart":true,"vejledning":"Alle numre starter samme sted (30 sek. inde) – brug +30 sek. eller F for at springe frem.","numre":[{"id":"o6479m8pu40golhyrc668ezx","titel":"Statement II","kilde":"Jesper Zeuthen / AC / Marilyn Mazur","varighed":423,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--N6A6KV3v--/f_mp3,t_internalformat/v1/tracks/oulynklk57n4h3w5q3ly0736"},{"id":"lxioird24p18oomkqig7ptg6","titel":"Shower Song","kilde":"Teis Semey","varighed":198,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--okgV-K2m--/f_mp3,t_internalformat/v1/tracks/qtzx897pb74s5jcy0mleuua8"},{"id":"b74x1xjrih433sq2x5z0rz5o","titel":"2620","kilde":"Mark Solborg","varighed":529,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--_IhOsy9X--/f_mp3,t_internalformat/v1/tracks/p1ajhpp91c5bsz25k001ffmn"},{"id":"bic4dm961bapurc133rygco3","titel":"Sushi (feat. Alistair Payne)","kilde":"Teis Semey","varighed":210,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--hGpiPtby--/f_mp3,t_internalformat/v1/tracks/f9468zzaomfwfxi4ro7omhsq"},{"id":"ohvcntdzjrz988quzzk5x2o3","titel":"Tutti","kilde":"Jakob Bro","varighed":373,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--IU4VO5Aq--/f_mp3,t_internalformat/v1/tracks/an8imm1nuklkuf70b7m5nsl5"},{"id":"g1dky7xlxn73jv0rmjazkrdg","titel":"Please Welcome the Giant of Rotterdam","kilde":"Teis Semey","varighed":218,"start":30.0,"lyd":"https://res.cloudinary.com/fmd-prod/video/authenticated/s--kjWyhSnS--/f_mp3,t_internalformat/v1/tracks/uftcqpgbil1zrtkneqr7l7v0"}]}],"boelger":{"ai5efdleqe31db0486zugstb":["yxjacwrnYftqkaeqrxhg65444557425554626465344656_397667735865666587747961667528676z54575956657339625737565745604553265653557866565556555465546854555y9687z858267275679858588756-799788-76977-97988-7-5676756986-8699768-85788976999798868688997778778985786967-674-376998868888698897-776780xprdoYVTMLGDAAAAAA",214.2],"b1tl7edlvncr189dlni0bycm":["mmflqidotfdqidY25x99947095-763tyzymrnzmoqs92s8puwuwm4qql3ukrolnxteuxoknnikqqiok0uqlsipnny-t29--9_-6-68025256-2u9886--8--48-8280ms2mtskqmzoiiqtrusprystissxyurwuukqoxu51_w4t4-66128wwy60965769-36--759-544586104u7uwm37-99920w9xvwvniss5svknw4lqus7zs1812y56-83x_8698808262976337628288-69-647-866186-vgqRAAA",235.75],"b74x1xjrih433sq2x5z0rz5o":["ABDEGEHGHEEEELKOHFDGOPNOMKHEJKMSRQQSUMOJFNTOKHHJIIQMTNSPDVQTWSNVYVTJiWcfZgRUSSVmqohcYfbagkicaqafkmommnmnlkljWTWPMQPOOPUYTTSSOKMQMLKRQVUSWSZVTUTcUaYaZTUTRTTMXRafhcbfghjfbgbceiebgdbebfgcfgjkgklfjjilmrnppnnpx660z_v2z84z098y83y17y2yyyx42345222ydINMKeYZWPPcUVYjKVaZNYeOVPRQaaUTObeZURJMNPSJQIEDFCDCCDDBBAAA",529.11],"b7iu9c9ol547sm9c583x8aec":["AAAAAAAAABBBBBBBCCCCCCDDDDDDDDEFIy3tPTcOoJmcxRJkNRHohbRjZLkIlZeMcVJXGnSPJGguPRRNepWWOtojcYbpjYUPMcWsPLRiajYSTjZtYiZnZYXPOxbn0XdgcXpUZvemwZTaVQjPM3csRSpOcJvZhTMbKOIgYROIUnYQRIobWdVNyiPQNMkeWVXMgmOOJPgjWSRMlhRdlPfYLcRJ5kbwYdYUWcPMzokrWaUOOiWO_yeWldUYQsbnUcgPPN8hkcXiSSSugkXQdPPNKcPPLGFDCBCBBAAAAAAAAAAA",201.3],"bic4dm961bapurc133rygco3":["577-867985998777755778u6988993697787887767-9799-9887959-9989879969980dkiwqontrq2tsw42un86y0923887xu6807884772079889999999-889999999_98998-898-99859989899999989999999-98889-999-9-99--989998--999999999--9--9999-99-9999-999999-99999899-99999----9999999-999999999-9-999-F38-99999-99-989959j0bZVGAAAAAAAAA",210.55],"bpwi5aqnu820s0vfbs12gapa":["BCHHJQFGJIHGHHPPHKLJ-_0-9-99---9----3---gP-9--6-3-96-9-93BB-9-9--0-9-90---99--9MB9--9---9--_-90---kO0e-TQ2o9KO-4z6BB--9---98-9-91--------NQ---9---98-9--1---9d-9-9e-j-Id-----VB-0-9--2----5-7-9----IO----_---7-99KLBA-cO1e-RQ2p-LO-405BB-9x---96---9999-9-_-9C----9-_--1---94-9-9w-7-96---9---95---CBAABAAAA",149.08],"br5uanknhph65amzt6jzcpjt":["6u---09u--2-5l_--58l--2-7-2--59-v_2-5-r--89-o_4_2_--98u9-6-5m---57m9-7-7-9--599y-8-5-u--889r-8_-9_99-y--8y-w---89y--7---9--79-1-9-494-96895-8------919_70_v--_98w9_9_-s---7991_8_6-2--6794_8_--8-7949-59-v---2-w9-9-8w9-7_9----79-0_7_----859-y-9_5--9-8y9-7y-u9--88x9_9_9u--97991_9_uGHHGGGGGFGEFEDCCCBBAAA",102.03],"c7u5h8zbdwyubv40rw8y71jh":["AAAAAAAAAAAAAVVVAVAAVAAAAVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVVAAAVVVVVVVVqVVqVqVVVVVVVVVVVVVVVVAAAAAAAAAAAAAAAAAVAAAAAAAAVAVAAA_qVVVVVqVVVVVVVqVqVVVqqVVVqVVVVVVVVqVVVVVVVAVAAAAAAAAAAqVAVAVVVVVqVVVVVVVVVqVVVVVVVVAAVqVVVAAAAAVVVVVVVVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",44.04],"c872te4ditcbu18369ni8rqv":["o9999-9999-999999999-9-9-999-99---99-9-999-99---99999-4179994z7r7934768994z7n8999899-6599l978499996893999-9999999--9-9----9--9998999999999999--999999999-9-99995987288297576999520vz9579479999909-49-55-779899999-9999-99----9-9-999-9979999-9---9------9-9-9--9-9-9-9-_99-99-999-99--9-9-998-989999999999qT",242.05],"ch6pyw5ib7h82spuvf1y4b0v":["AAAAAEHEEEEHHHEHHHHHHHHHHHLLHHHHHHLcOLHHLHSOOLOLLLOVLLHLLOOSSSSVSSLZVLLLLOLOOtVVOOOOLSVmqZLLLZLLLHZLHEHHHHSOgSSZVSSSVVjxVLLOHHLHLOOSVSOOOLLLOOVcSOLOScSSSVgOOLLOLVSHmxLHEEV470jgZLOLHLOSOHHHLcOOLHgZLgSSZLZSHSHSOxjZOLOHOSVLOHHHH44VLHHHHHHVmcLOLLOHLLLHHH4VOLHHEHEEHEE_tHHOOHHEEE4SLHHHHEH4jOLHHHEEHqSLLLLL",147.22],"cmc3owxsqzvw9axz3xvti6nc":["--96_--1-68-86-984-9-96--9--4-6-88--88-_-9989-99-6--889---98-68759986-9--9--984899-97-985----8-599------8999-89--79-479-99---9--599-9-----8969-89-8-8-76-8--8899698-8--69--885-_87-8-99-9899----9-4-78-9987--99998999--86998-93---8--8--69-9--8-8997888-9897-8978-687889998-89988--8896UIGd899-79-8795GBAAAA",210.03],"d6srfv8fhf1ezv3nez0syhsm":["ABCEFGJMNSYfSZXdXVZVWVYbYcccdemimoklry7766697989977_-8-98999999799667-9968-96--798999-9--zy2w8mm7061po776x6ls816xv79-88--99999---88---6-8-998-889-87-8789-9997-87-989-85r146n01354y58988996999877xut1s38864--966876869-6867789-7-98679-8--97789898897-899-8998-9-99988689899-8mznwxso827uvyr997-89-98-96JCBA",307.08],"dfmfca8c6qajem3yfsfbs4jo":["ELMu9292v42172t558w0z7749417896z3z492035828n255z2w96z7t42754u65548x65586s7-498799--997-998--99989-9988997969-9-83-99-98-6488z6487386679797887097678z75794w732828876899969-77--9-88-8998--99-_8-7888-999889-9898zuyplbjejtinghZZ55899-759-97989979-8796-8-899--999599--77-8-9988--95998-959-92odgUWTPNFGFCBAA",244.06],"dqug0izu4irsy0ww4xhg8ha1":["c____y5____6___-_y____8s_9_____97_______9_-___8_____f___________y_____2-___9k___9_______t__________m____-h____76_____u_____x_____9_9tplhy6-srbZv2yjmje__w5o_z_rp____y______________4__q___-_x6_9__5________________6__6__3_____v_________5_sspo_4t_rjd_9-_wrlt2_spi_s_p587___________7____4_____2_uZEAAAAAAA",229.93],"drku3su4aaanxakw4nmddr0v":["ypXpZ5p31l52h5el5nnS4U4nw5405xh2joZ4Y4euh544xi2pod4k4luc5c4x57t82947tnr8f_9h-o6462xo69ccp7o9nr6n9z8--uiq9n_zurd93pf7hrt9496w937980_z56-_7-wx5_83k_97389w-2999995805v7-5-335z-95274-99z_94-s_5_9_0388-_9055_971938-_--81_7_9-0_x82__7-295_917-230_-u-0maVu52lTNKI1b8saeR2S51pgV57rv3goZ5a3ev4443vwmYRQNLGAAAA",68.73],"dubyucwob17g90pkani1gyp0":["BFGKRSTSRQQTRNKMKNNNMOPNNObSPNMNNNOXTZXPPNMMMNQaWXgPPSOMMLXWPSPUPPNOPmchWXWRSPceeTTQSQXhggXUSONNMLKLLHHFEUdlcYaYZXYYbXYbbScbZgXgaimbdbdXWVORMYkhlmpnhhhZbcaWWZmkdhcgMKIFtpf5vus0slmikfhdyo_7z36spnkeXVnpm-0t7v20gkf5xx5934ttvsp1h93u-84y9202v0yoiWdjjghgeqsqonhjiklnohomegonmrlhbbcYVWbYYZZXXXURRNHDBAAAAAAA",241.54],"dy3lgsfqx56djzalrk6r51gu":["KLLLKWQRPSSOSRRUVRPPPQRRSpkYSPSQRQQPsdQPPNSSPOpgWQQTSQQT29tvXqiYWRq430aSpgURT67zdboslVW75yxeXabaU8-507y983759-2m--77q6997569983189977-_8-62_79529-6w7-98y79-784--678--5548_653u96-x63i4ctsn5ao9661o3755sv677zz98-267--v7-7-w799-28-_99-999-96--987999-8_--99-_989--97-9-87998z496--68-74w295aWKHFDCBBBBAAAAA",199.76],"e9p8sq68pz0nr1wxaycrpe0k":["NQUVZdanMZWkZjfgrEQUXXkbr1KZUcUrdxvIPNYcjX81RYZcgrexZOOZWddbnOVTbdkcmpTBAAA26injgeqnsgkklgluhkeckrksvegZiZpkqynfdiikcqssikkilkwelmdimon2iywqmukt6jibcemlx8ikekfrgvwqgehikcrn15inqriwjlhgdibcjbFCDBfpXeZZWnlfdWaddeihgSfrsjtqurdghofsr9_xqjkgtjmYYfjomuaihZcdYqnkdZdiciablcTQTVRJKmXTMIIIGFFEDDDCCCBBBBAAAAAA",204.03],"efksaggxa1z2ovd0jfpmkdlt":["RRRTFFCSSQSGEDQRRSIIDQQRUVWUZhkabSRZbddUXZZifgbcZZgfetkgcgmkskZXgeffcafiihgkfbkefh2jffgneyhfgiiehggikiijokjlil0rkoovuyzsw2vv01yoops0uq21vmpyoruuwz2ytz7035xw5xzywuz11twtilsuyu32owtz0x_sqkpvxwpfhqppptvv6yv5uvy53050rkvwzwummrurrhgiolmp1fdiddaqbUWddaokYTQNM0nYMLKHkbRONKHZYTLIGGRNMHEDDCCCCBBBBBBBAAAAAAAA",168.17],"f9uhjxd9547it6636t9ynmxe":["loslknjbiYXjlaWTaVtvuxlkqkdmideZWYUVgnn0orqgnklecaXWaaaljwonqdhkgVZYVbecpzwinszlmptgoq4oelq4rylgkjXgcUXUOIZaS6ttiozqjnykxtszoir7zrmrgaRUMLLPLbThanwvnxlnifgkbddjYiev4xnqrsdcjleWZZdZka4gpl0tlhedaYbagYlg1ooqvxgblhXedZaYWYkqiVSRRIPQNTOPRZWd-_lbUSPIKLKGFDGHJHGFECDDFEECCEFHIFEDDCBCBBBBBBBBBAAAAAAAAAAAAAAA",58.72],"fk9s3dn3phi3ujghterqbz19":["bAAAAAAAAAAAAAAAAAANMHPNGcVYUWPQRLSRJZeVaYVVSQZVXyidjbaWWSRPOjVUgSP421qrfeWYbTZSNQSLaVWTURXONSSLiYbYYVUSNWRUedYqbb7210vwhiejljdXZXXjZaYYZTVOUSQmgeVZUUTPNHFDDCCepnonho6__-79__55_-310z1_5zrtrntoljmfofnaXjZb_8x3_7-52_z41nxt81uwxkdjmdYvofeeVUbVPJLLJIGJJFGHHFDEEDEEEDDDCCCCCCCCCBBBBBBBBBBBBABBABBAAAAAAAAA",33.17],"fn0wyufg3sw34wappgitrlp3":["AAJSVUbXaajnhigabcSRSUUTPPRUXZdcehkhjrjthkmkhmbbadVWYekripnsjkgocYVWSTVXVYOWacfhgitklilniccZWROMKJOLLWdifgkiggqnpfrqnkbmlknmqpnpq133r6_xqkkjlWnireYpjgmijmifceghbfecXXaVONRTSSafijphcgfWgjkj0osskunoqqpptmqkto30pw2rtsxz0tyytwu4xuukpjjeeaWSSOKRORcbddYffeehidfgkjhgdidVedmlrrrtlgeqodYddaWUPWVNPNLJIGFEBCBA",57.26],"foakcm6fzed53ffm16kh85ek":["ABBCDGGIGGKLLLOONYcWVJMHGFFGGHGGHHKNNSUUNNLHEDDBDHKNTWaUWYbWaXXTWSRMKIGGFGHLIGLLMNbbit545_wulggVZRLLLLKSLLegekhddcZYPNNLptdZbbZZiWVUUPUTMLLIIIJLLINLLLSQINNIUZZccaZUONIIIGJKKQPRSUNOSTYZmehihWSPJKGHGIIHNww256rhdWcWYWPPSPNJLIIIILMNLILKLHJJNPRTUUUdWZZYcaWQPLLWVTPSSQTUTSJJKIJGECBBBBAAAAAAAAAAAAAAAAAAAAAA",55.97],"ftcxckyl11m0ur3f84i2z0e3":["ABCBBDDGOMCCCCDPJEDCHLHDGDBEROWNSPRaRRSWXbcXQVWUaSSPSWaQaTPRWROXSUYeTYXdQUXWKbQYXXlVXeWpgaZXZdbVZZbZbcgUZbeTXXZWddXPTXXVTVbZWRdXOVRRPNIHafgttwlqxw1ttmelquuoo6nu1qp4yvux22122y5722w-3yqslqq_0z52-v821utxvohimiidacYaWVWmdXggeRQXiTXgXYVYdWVWSVTVOHHPLPMOPRKJMTWTWRIOHRXOPKLTRNLNKJRMLRVUSPILLLFHGGCBBBAAAAAA",364.3],"g0m7cjjbvp0nfi5u2dbyg4pk":["AAAAKJQRKIHHPPZRNJHTSQWWOKIXWebOLJXWiaSNMZVgZURMZVaWROJWUcZOKGZTbWPaxmpbTOLcZTeWUil4ZdaQMJbWTaSOW_sgaXOMZfRZUPTo6hfTNLHZXkgWUk4kkfXTOaZSiWRbj3dmaXRMhRiZUQd8gcfYQMWRNdRORrlghXOOaZShWSbuhedSPMXRdbTRXvgkgWRMKdTjWSYp4dbWSNLcWgROPZvloeNJWRcYQNKWTWYQMMTRbeXROYVSYUQMRRbWROLXTeTNKHRPaZPLKVRNWTNHFECCBBAAAAAA",172.51],"g1dky7xlxn73jv0rmjazkrdg":["46678647778628777_wryxbtmkpucsS0y1upxtquhcGHOLpfup8x7775828766z778468688778716888877888888w1887877645577889877978886666778888888867888766888696898888888788887988786888878868988998998787888998898888878pow8z4788888987578588877707776978746878477888876678787877878878887888788556598777678758660788784WJEC",218.09],"g1vnr78qi3jyuozv0dkq6gqd":["PGDJIJIOJGFMMdourrz2xwrwlqwz_6uzru2utfVfw2udSJJGXjoZSZVcgoXVfrrtacdSXlzldfmmrudaXZoijxwtcmdclgofqcmdOLmUjddUROOVjfcUjd2rraUMOfacRJFAXlgSRDAcRiVSPOXZjjScggowmjdZguqlmdZqowifcgmjfodicgdtqVaVVSUSFFAAAqgUrrgdjSLFDAAAAtcOImcgjZffgq60rfcrfo6zlmqmt69im0oduqooijxt3oiotdotrlmttSGAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",240.74],"gj3cw48znx53x6zlbaccli9s":["osvlzu5s49999999------_-__-----------_---------__---------_----___-----__---_--_---------_-------_-_--_----__----------_--_-----__----_--_--_--__----9-9--9_------_-----------__-------------_---_-__----_-------_---------_------------__--_-_---_-----------____--_-------_----_---_---_-_-_-----__-_XEAAA",293.7],"gptkvjbkeskrccjfqwh7a2s1":["AABB79_9q-88-99999--8999-9-59-9-89-9999r999-91999998-9999-99-998999-997-9999998999999999v99-9-1999999z9899-99-999z-9999-7999-4999-9899-99999999-59--996-999988-9-998999-7899898t9-99989999-9799-989949-y-999999--9-9996999099998x9999899-999-9999989-99998999-99989--998--989999989999-9-999988ZQMJFDBBAAAAA",262.3],"ho6svwpvp4cwbl1qfvmdw2uk":["RTSQURSQVSRUURRSPSSQQSSUSTURSTTR-smuruprplpweukvktctaxdpeyczcwbseztpmpmottiqqurwstywomlhqjtmptugrdtdxf8cvgxfvkyt3lyl3t0q1pxxx2x4of--___9_--_-6_-___-9_--9_1_9-693_---87-839-968-989-97----7-_--_-_----9___--_-997_-----9-_-8_99393_---77999--989----99979832-6--_--99987_59yzrpkgZbXYbYYWWWRQONLJKHFEDCCBBAA",58.03],"hqs0l90smtdgkrs1l3lzbipw":["CFFEEDEgbcdcbaYgZbZccZecdfrspw1tlbgqstksshdb0lvZ3msgtuvygtjggby2216260gwx1zyz41iwv24q1tvze0yxs1wp1n2mhljoldgej463034rjg_7621weec4741v953wkz16zy56434t2z2zz3y3y067616yr2q6pyuv0vwlg2zzqzrz3y123twx22vx331u26yzwz9zt587vvzyzq1kkhiinfZdf46vy662jg7324z4lgj232zw-742in184z3775516v21q651262f9766yshldWZURTVPAAA",182.44],"hw66pyxb6j9ll9z0b5w5ktpx":["JHLGuoaYaRTSSKIMMbR4jZacWTXUYURKLV5speZXTWRVRUTZ-1jdZchw1rcgrVV44qlsecuhckehpz7ypeogkelccchbe4utnsnnZcfjglhjrmiiiZYUXWWXVY2rjhaeaVZXYfaem3yigidfciVWacac9qnpmpjapkrmhxjqnuszzppkrinhqo993mgkcgibbbcix_5qYTRKKIIGMQrulXalOtspdWrNPdUTNLTNKIHSRNagOUUNLKHHFGFFEGEHGEEDDEEDCCDDCCBBBBBBBBBBBBBBAAAABAAAAAAAAAAA",52.35],"i5nkuwn2zh5l8vfz0rsdx9e4":["hJ8U6U_WEd7VEz7PSc6PTz9WWYS1TmU5ROd5Vis6VXcnnljoprt0isnveooxluxwruxotsyirnxrzy26r7vm01yl24ows5oq55ssuxyw423sx43szz8txq0p2x1yvvv6q8v7rpszmxv6npouhqjrlhtlqiriqirepjugkipgqmqphqooiqejhpdnqsfpsrnhrnlgrjoirgojsgnosfpunrlvlomsdskrgur4f0t6hqyyxi64mm7vyn47umpf6pyl6wjuyxjy7ug85sh59smtx5p5vztmyztq82spGBAAAAAA",216.03],"ibt6zq31y2268c55sotp2vrf":["FGHEEEEFEGGFEDFEGEFFEHGGFGEGOLKLLJLIIKJIGEEHHFFFGEHGGGFGFSORMNMKMKLKLKLMOMNQPOSWSSNNQXTTQOSQQPNPNNOLMNJJJJILLLKLLLeYRSMQNfcTSTTSfhYcZcWgnZYbho_0jcahfathrnnkt2v506579otroktx3y24tyt50x7219qsyrszt5tosssz1znqgomyohggcdsifgmgcvqgmikipoecbZXarZVaZSqteXUcbZogebbefrhflbdRriSNaZWwifZRTYgmWaYXagTEDCCCCBBCBABA",53.07],"iw966em3sjlbbark2x6qujy0":["KCGGKOKKIKGKKIIMIIIIGGIIMIMKIKMIGKIIIQWleeKKIWpvWSGavjaSeKEaYjhljljlnnpMMMMtvrptQMt_rYj3zjQMKKMlz7rhaUx5xYp7njSIIKKSccrxpcOQerjehQOn1lphSOOnvvnnjYMKUOKYYYacMOOa5pplGIe3levlKMcztpjnrhhIhz1cjzhlWSUQltvzrQScrjaW5xrYGGGhl7zttOUe5tWctevcIGGKWhlneQOMKrjzvlUIIzprnUKOcz1ttYYGKxvpthWQIKrtvlhcUCCCECCCECCCCCCC",203.07],"iz1n7h1vcryj6u2fhdfmfcxi":["AAAAAABhNZqlXX9jXt9Sdw65i-r5X9z2uloX-h-i--62884ohim95v8t0X88gvqrcmjnpyzu3p6isfY6z997yvgaYeoXhxgpz9zhpgbyr1967wznqgw779pat8_9aog86467-98-z-pn_79-995v7y9-nj0-9vl277qfrr7pmrxwbUWcYaateWhnNb8q8k980s-5ymhluv6g5c8a99t3oxu6n77-vn_l805vn1o6j70V977fstZzx_z5q78la8cfS-87y1r6xUYifmk89v521sqcXhPbfedVdeXeWDCBAAAA",229.9],"j5goa5eze6arlttt3zilahui":["ABCFEEEECCDEDDDCDCDDDEEEFJGIFEEJJJJIKKLKMKNSQUSYc9vrbbUWMOLIHIMLKLKOMONNMVVSSS7wjhZXQNOKKKJIGFFIMNOPTTTXXXYeaddmopk9ypiYUVONKHIHLNNSPUTUYYXgejjdZXVURQXXSOMMJKLMNQPMJMOOXeiov99_86x94x73q--7v29t699z36789_-r755595-88z--969979z3--_xihZagohebZlkmpemZnolkicnvyytlxuny91pyy85--8z945698__3mVPKJFFDCCBBBAAAAAA",165.0],"ja77fvtwsqp015fvdqdp2e4p":["LOMMOPLNJIGFFEDDCCCCCCCCCCCCCCCEFFFGGGJIMLOTPVXdqk2g2ur1rxpi8o2sn4j5ug3h9zg3h-pl4f9xk5l3yn7hv5p6j6km6i7zh6k6xj3j9yh5g9lk3k9yi5k3xl5h1ts5ozmf7q2vm4k4xh4h9zk3h-nk5i_sj2n0wp7u5rX-h3pV4f5oV4l4mM5l2kN0j4mO5n6kN5l4jP1i2mS2p3vW4p5rb6o5sa4k3qS4i2og8u6se8l3pWQTTNPMLOIHIFGFFGEFFEEEEEDDDCCCBBBBAAAAAAAAAAAAAAAA",142.61],"kgxfnjh53ss9q8tsueys9il1":["AAAAAAAAAAAAAAAAAAAAAAAACCDDEFDDEDFGHKJJQOLOOSTUSUTUQUXahhpx2_540yz262042xrlkgijggpjfgbbeaYZXVVUVSPRVQPUSRQRQVUaUVeaYUXUTSUWXZYaaXXaaWUVXYUQSUVROUTUUZXiaYXTVbVbXYXPRYRPOPMORPOWTTUTdeYdYZZYSUVSUOOQUWinptz532xrrttnpqqmnnkjmhejiggebYWUUSROOOOLJKIJJJKKJJJJIILNKJLJKJMNOOQSSRQQOONOOPNMJJJJKKKJIHGGFFDDDDDC",105.98],"kyd8rk1w3xoit0ez6xa0jt3s":["BBCDDEDDCc30n10pin30-4u130xpxon2vwxlxtr6ywm4r4yzqy41aRRQSQTRmn5y3x04s7zwz39x7tzq-wvw4825nvu02yn101t22z5u5xeMadakgeZdmfz0w714u_30648-4x87232839-269y97345159834-y--2-w5y5-49z_yz5w_9y_34x-1w-25686755-8-2541170-963_2082-52s98z694z6559wr063tpnvorqoxjsgshsleekebcccbheZfiaWfVcaebedaagdYTRSOOHHEDCCBBAAAAAAA",320.97],"l4es7uht4yqw7rzhaz3euf1o":["BCDlePjR0QxdTqUpTlVKpOwbwgQ6ZiSiYRxWeM3jZtSxYyZT2RnXqgUpRle5nV1wQ0gxfZcczaebh6e00mQwX2hYUimRdj6ugo4-ya7n01q78qk4y7coXc6WwYxhrxU3Y3gWoUsVxho2ezpuf05P1UrlksX5i5kslVz3azpbxegd4rMeh3dv53MxX1hWSakYhl_9-9-89849969-945--_9-4__9999976-_8-z---5-768-9--86_-8---_8----9799738-7w-olYkYOtQrTleKhQhOiYKVKECBBAAAAAA",237.66],"l62ejqh8pz237rwpely8fmmz":["AAAADEGHHHHLNNLNQRUPPRRvld8u-x3j8zp-r5k77u7h-n8_u9g3l62r6gz7uyo_j32t5y1k04t2y9g20t0t6kz8tys9i38s4q6k87r9t5ix8r4o3e10qxm8k27r1m8955p7o-4s7w3bw4o4s1Xz3u3p2Y20w2u5l3xuyv7bt1z7z1e15v0uoeZPOKJKH3mWdMXRKMKKKKLPNOMT7wy9w4X97w1w8W69szq3Y11uzq4W26x8p7X45u3l8Yw0oyk2wzyv4oz0r5ozjx0q3y2jyefOPPOLJGDCCBBAAAAAAAAA",112.22],"l7piu7d9lf9md60gn9bjul97":["ABCCDEFG33w452845815wyxy5ey456601y25x0yu1ty345x9s4y4062z4664875609v1931vz57z51w419v8z3t7Z4Y3443851y4y473p4w4302902221124wz3193w838-a4272148123z140zy30002zt521z3yz2-881445t747ywv550323995458v47333w289v3t105578334-00-7979046986868689_-_79482gXWdfnkkhiigmkijfajmegqajjsxxwmmlomvubravdyqkqinw18eGECBAAAAA",231.98],"li6q53ylp1d4mdwvygzycs59":["ABABBCCEIJGJNONRUQTOQSXVYRUTTQRTqpohegaWVbomlhkejbRRutstr2sgeZtssngunl2y2zzy4_9qzq0z22wypyhZdbhoaZWkpXbXeZXZTdgWdVUUsyqtepvtoiurmkisuqZYzsouo_smoesp0smx2ku2z212-7510uwu2zu1tv2ohXeibhhqshdVjiamdkseebjhbbVdbXVRWdWZWXYXXRSUTXTVVSRRLMMKKLKLJFFFIFEDDGDCBBLDCDCJCBBCLDBFBKDBBDJECBDHDDCBFDBBBLDBCBDBAAABAAAA",580.84],"ljcnd0sif41s5f93t61w6hdq":["ALQLIJOLLLKJLiUPKJMSSPJJLKXRMJJP-9--7-99-L--2-9q----8-K-----9-----Y--7--n----9-V-_-9---8qwvMl9y95p59-92vJ-5pAAAAAN9-g--z-9x----7-f---9-7---97dE75-99----9-h--3prWuqZkRTY-z-9zp9-999R--hCAASAA--oW-0-89e---9_Y-9---9q98-5nJ9197vJ9--61J-8yCAAAAD9-wh----9k-----f--y--9----8wA76099e8----h--4-9-u-89AAAAAAAAAA",117.32],"lw48cb1e039p3osgrhkpo8jp":["4wuusnns5qxwtonpxu4usnnms5xwwtons-u5t9wzv3szzs1020_68422324x25333492-0736y761582889_3-767607z759y959z547z5796271927x5txt7v5s3qyyzmwuwsrrlneidecebfefiepjhnecgb1lzqicggsnnlkfdfh1trmjjkgy2pxslki40trmjhmkzwqsljqg2lu4wrhh1twqmeZcbohpnedhh2m4xpZlb9c1xmdvih9j0peVqa1YqlZdgYefeeYWSYSVWSVSPTSSULOLKOJHGHFGDDCB",192.03],"lxioird24p18oomkqig7ptg6":["AcYeaRBAdaVYbVRSbRVa0su-5398w3_93_8298z0401___t3_1u_63-82_904_z5999_97-347_39_8u92x5947__j__8_-29mu7vuw_98__k8_9_t0_x581427zw8_710_650_0_9963-833y__1-_-8_9-_89_z8867_69_5-4_-_984176_29-6_99_1-_196--99_-_9__5-37_1678z_5_8985896_59-4z-___9-vy-_-1--__69___9__97786_6___94__73-_47979_999_-____80vjhenSECB",198.04],"m89t7s3xrida6g8y93l1vxru":["AAaVxhcbgljvhm6WtVVwXfaSUXZgrekccelfpmVWdWVaVlfqWWepepcWWlcWrtt16zsz765_xzyuszsu35yzt7_5tu08yu2412z2610v6p4pjkpikclbcjlpz26y3y6304koukoxuzpsfonztyxlqnoirrx0yy1139-7u23txvuvsx36229-55y56z404489-78975986488544757z77x63691u44zzutcXXMONRRWp1z9669v1xtzzz41tz1u58-8xy6s00vy8-35z261s281462zwwy2s1utsePJCAAAA",242.57],"mal7okjcj7y22uued2mqqjsd":["Jxyvv12y2xk561x3p1tsxkx2---389zu0r7psp989opn894ip-9-tq59-sll9--w995449_2-zou-y-5zkotjgssswxq36xksvj0_92q898y--r896x7--9-_8-4z12xkqvzry1rxpykr2ou0uy953-t39x_uy-v8_szpv-6-9997w-7288--839j_-t959-96-v-71-7-979--9_1_6-87898887-95-782-7-5_99-8989_-z79vvtu8wu0sqpv7qrvw63yzs537q1u5yyrl5rym1jROJYZMGECCBBBAAA",178.57],"mn4g5usxw92sowp0uevsfbhk":["igbaVSQPPaaaXSYas5858wyvqiifwwlkidXQPNNKIGddYSXdXSLLKSTPPVggkikbYigTSQfffbVPLLLKIGGFaSbdVolkfikbaaoqlnYkgdakwtkfYVQPNiiv8111wsnlv98369wnlgwtwsvnkyookfbYSNKKIKGaYoqgbbffs196vyi1_03nifYYSVPwvyvy0v6skliknYXawgYaadLLSTQQkkt1vyq0aialglaXYNNNSXTPQflw0q101ywsnifovidXVQNKGFDDCCCCCAAAAAAAAAAAAAAAAAAAAAAAAAAA",109.75],"n33ijf1414qgtcbwhbcu9apf":["Aceijgigjgrimqtstkpirytjrw12yuwuwtwxuwsw42svupw4uqquz4uypt1wxvuvr4m0qvs6oo68ozt2z9q0wvqyrvzyvuqs2pv30usmpu0opsqxwy21282875305695025784968t2y81z4677264819562689_214z104048665243x8z8999--0358503z01zliokirXgddYisgmrnsyxw30swrvqxqv86454wr225538_696--_497881387--69-2471540y48--39y61wqkrt1qlootqlNECBAAAAA",140.2],"n5djeh1pe50ey5vs8nnj60y1":["AAAAAAAAAABCCCCBCCCCCEKIGEEIMNUSNMKFEDDFCDFEIHMKKIJFDGFGFLPRSPNKIOIKKLMMMKOIHKHJLONSTVUOMJJIKRTRWVTPMKJILPRPWXMLJJJIJMPTXSYRwxqjcbZtd9_uo4wdWTTNNMQPOQQRQPRTNNPSNTMQURNPHEGHIIHIHJHGKLJKINLIIJKHGIKKKLLNKJJORSZTRPPNQQWUTceXPNVNONQXSOPOMRVaZWVPMLLHIIGFGEECCCBCCBBBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",144.03],"n5wjxgxp4f46fntz0xaxpl4u":["AAAAABBCCGG99j89GG99999GEg99hE9999NQeUSO99p9eOq99ul7SMMJfV9999bV99499bbUPNOMb999999ZSSNP99oR999NkW99989VWU9989WQbNMMf9h999gX899ON9X8aNOQ9X9UN9999c9N9597999N99999RrfZ99z9999kci999999f99nt2qy99902u664698988897588989799-9-98976-885799989888998777989_5888775355887575055647974567-999998944xkYTOIEBABAAAAA",130.04],"n6kb5aa3zxi67zlc4rfadhlo":["MjIPEPMJDYDXcHNMIRPFJHIXfUwXNXRQPRYNVVNbQVRXRRZVZcdmVjRcYXQVQXVXXRRYYXQVRTVfjfncYTQRVYZoUXdb66mrZUmbYXYVdZkgfbnygY_sZmjd3gffYgzRYYXXZNXifgXfdbbgZfZcccvnggvoojrjiiogjrojoojkgvqociggbbcVNgVcMLjkX6dffcfVcfZYYXfmVbcbfbbYZkbYRRQQXPNMNMTURTXTVYgcfdZcfdcccfrojnkguwsrquuvvuuwzfVMJHEDBBBAAAAAAAAAAAAAAAAAAAAA",192.03],"nacipfq5navhreri62o4is6s":["HILRgiahlegnnn01rmhkrowur1llxnkt3752wooggabZifYmr6725puo1zy10zzu5z19uvyosvntq35110xzzajklriv007801vurvwvy1vrrmu1t0155-39561382056zyz6035wxxorxyzz42303344315953z094630-644zv0142uyxxwqqy2xvzqq21tltqqy7qvwywz1x052z2w02x03322_45-832-7378258592536677-48648745-66422132y54y448u0rcUdimnsmklorkibfccZeZdYcROF",173.59],"ndpgzoxf9behtsorjpow0u1w":["QLJIGFEDNHECBBWQNKIGGFZMKJHLJhaZROMKLQNLeRPPPcbNM1SRNMaUuidWPRQQPJPW7rkccSP7VQQPzyodbZXXWUTR6WZ6hhpkkfdaUzU09shUyZVRQST0hwkibaNPTUXYo3oidZbqeabWYUxofe-qseY8faiih1gWZbba-mfuwfbah0iWyfXreY_QRzgm-7iZwgflkdedX98-9732zyx9wywwyt-771pjnbTSXO63lhhYmnz8w79khbsbhuqjfZdeiZTRUUPRRWTYTUWRRTQSSQNKJMJJHFEDBAAAAAAA",190.62],"nfac55op6rxwbe50mu3wi767":["AAAAAAP5-9606xtz0nvguvr93msu8o56w731981yw05mwkurnnu8-7954-0825vx3r2srolmlgihgiklvqnhoqn985mt968303qssrnlykkz5630vr6z-_96687978451zqeemly57-71p3x6210yx8197ytovmnlqon918560w7-6897z711w23qoojhiejlyowkqhh0xtvjl10u83vov2pqytqlyt78swo687_zz72423-1txx9osztuvjfrjirudnliiYoZPRQLJJGEEDCCCBBBBBBBBBAAAAAAAAAAAA",43.8],"o6479m8pu40golhyrc668ezx":["JRHCEBMIHEFIEEDDBEGHFGGCMNGHCCBBCIDCEJGCXEEHr3sKL60JEyjIIzlIBBicGEhKlcGS9qebrFkmjxKrxmcBGxaZ0cdw4LrkQqvc3pcwgvi-orX7VrjQShmvXz2Nzqf5j3y214892124sR17--749056gZNSl_z_bw7fixs67yj1890-z802ytuz61_1qq5l-9v40_5s4q7ZUhdOzxk8492x9882yv0mqz089-860tuY4897689_7880-99_94-9288-769-88-6-88897798588-3udQnXBAAAAAAAA",423.65],"ocat8xbb3h7dupyim3vlla25":["AAAAAABCCDFHKIGHGHGHJJIJGIJHJMOOMGIGGFHLLHIJIHLMNMJJMLKHJLNLIcaWehbZdmgfgZdebYgsvt0pnqswq4qvrpuquorz2ustqsqxvuz4s7yvsqleWWOVSRSWZUPacUUUknwuqv249x400sst0vxqxxx0qyqv641s0swvuuxzwwz0u222tytziZaRSTps5u2nvwytwxworvzy1u_36533ylnkZZXXbUXWbopo1t0xzppsry3ottqvtsysxw0wnr2x0puzwjkokhecaXVVSNLNJGGDDCBAAABBAAAA",364.18],"ohvcntdzjrz988quzzk5x2o3":["NWNPJRKeLRNBGZQhVgYIVRVJILLEAAVWVZZfoTWeKTEEGDIELXmjZgeeZMJ5nvrcnboRRfkccdaXhHRebKMWNhktddoaiViidlgcobfWoqvlVgjaZQPVPNiyq14sygjx5ryquy15uyezv3uo73zupx0mv1ufuiceZuy6z1g172wsvy1945hjy67yy154zwvvpjkntpyvvuyyqv2ynx1qwluzp879_77300-412-9-9-939658_-5-6975449_8_936_1-9-z10040vpqfgmpZciggYjYYhZfUgTVTHLHCAAA",373.89],"on7yavvxfjfh2jom6mnyet0r":["nUiS0xOxXpXocTlSoOwow4j-WtjkshwuyoL2Yrt7ov-T3hulUpqvTleS4W99o0r131cr-4Rdh5e139Rw675ndt8ox165uwz_w2-174v6_1s708dobo-evYwom2m-W4ggrhsz3mQ1ezzzr37O5hyrsht6k4jrkV28uywx4xgt6jMeh3d7-9Oxz87edv0rq0-97------9_----83-----95-_89-720--6-9___9---7---_--_-6___9-28--76--60--8-odkTjQtaMrSkRhWQhLhNUNHFEDDEEEDDDDDDD",238.37],"ooo3qjgdw7a5n6zgwqan0cqn":["AAABBCDEFGHKJHLRRRUWURRfjjecicedkhinhbimmcjopjtjddabZaahcXZUVXZURUVaVcjlkhgqlcilmimlilxrjstutx4xwp00xytt48_-1v7888201wx24xwsxz070s477702y177xmyxyrst3z0sy478_1yy07640qwz7575x799_9zq4973zuu06zpqzzxup174963srty2y0xpu020rz12xrxw776zs-843zrt9zzwmivwqomeccfZbcZWbWVPTMSOMLKHJHFEEFFGFEEEEEDDCCBBBBBAAAAAAAAA",152.23],"oz2oj6x0symu76qxg96fqnmq":["ARUQRXSJRRRXWMRUYXbeTUZZbbdSbeXidYYlddkecYgpblbYefdggcahncigjigdejhXenihleWilfondgkierheelijqdapnotspqx3rsnquxxswwzzttrqvz0wt4ww42x1173zux73z-7_331u6400193xPPRRSRPRTTPQHHDELMILMJEGEEQLHJJJFIFFKJIKKJJJFEINGIIGCUWeeipyklfYXVbpekednxhzgeWeaafqnsurohcdYdTljlmrwzskhYgZfhflqroosiZaTXeejoyonidYadXUbYMbFAAA",306.91],"p0ffv6ohvxze48k40jjcfa2z":["EBBIFGGJJIKIKKKKKGIFFFIFEFFFEFEFEFEEEEFFGFIIFFFEFEFFGFGFFFGFFFEEDEEEFEEFFFFFFFGGGFGGGIFGFeZV0ojarojtnohmjjXXedeiadVeXTVcehhZZVSlZUUdXXgccTgZUUchgldcZXhZYXcieiiedcddddlqlgeeYldZXdeXjcghnrdZ1wwjmdim1onedonglgeoihmhmilhigdtjejvjinmgiljjhZnidilghvghgginnojilslenmrwyvy_hcPPOJIIIEFEDDDBBBBAAAAAAAAAAAAAAAA",26.04],"p9lifyw846e4asyzqkotlevz":["ecSUeZWRNKItutUWOMKsZJny02xz194763zl7j387tkzrsy89y895--9797999-992499887865784-w222699799887799987-9448789887978589279-786w78989883196579997749527w027327657d2999x_7771879z99999-989862928898979-686878z-999999-979777--9879--99-899949yz998498qw755cII2y1knjqN1krjZU99rh6UcUD978886978743z5ihlifTHBAAAAAAAA",178.85],"pgd2pwuh3j2vd5sf5vijidqu":["ACDHJIIHGHGuMROOLxosvw1uvsvks54xnvZ-yz2Vth9wyx0sj7y_-_z6997w5dy487w4i8yz7l_u99x726j-7-8816-7_y1m-7_938r-9-_9--9---96_-7bR_-_nQ_--6S---2R-_-3j---2V8_-1e9_-603--3eR__7nz_--jW--_yV_--0k__-2Z8--5X9-_8v6---8W-_1jR9_-9q9_-iSbS8-n-95wR978xY-89rP-_-7a9---c--9-or-_-qo---xk---0l---2e9_-524qUMGDCCBBBAAAAAAAAAA",231.18],"pk5adguxkjaf7nt8pxjxtlut":["AAAAACDDEFCCBBAAAAAAAAAAAAAAACCCDEDECBAAAAAAAAAAAAAAAAAAABDEHGKEFCCBAAAAABABBEFLLRWGEDCBBBBBBBCGLPkz16WUMGECBBBBCCCCBBBCGLh316ZWNIFCBBBBAABBBBBBBBBCDMcr889jfPIECCCCDDDEEWj1698cSKGEDEECDDEEZbt827igRIGEJFFFHKJIHHOJgdv-86fgURNJJUKIFVRKIKTNLKLbQvnz_99mjgaTUSjaXZizx53--_--yvaVQNNIGGFEDCCCBBBBBAAAAAAAAAAA",124.03],"pkszoob0wmdv63229jw2ydy6":["AAAAAAAAABBBCCCCDDEEFGHHHJKKLMOPQRSSTUUVYZabgddeddddeghhhiijiijmhjnlilwzyt1wvzxvwwwxwqpsvtmssmn9vsrtprmkmv5mxosqnmpnpkpp4muyn0z01zywywrxzw40vz2r0w00y0yvzs0u00rq4pnvztvurun1rurxxxvxw4rys0x2_00vzx040v4xxzz1x4wxvww10w0zorsrsrpkvmtttxrtrsqomowuqtrrrvtvutuprrjvnuqzj0moqmijkhhnhhgjfekdibWQNHDLBAAAAAABAAAA",188.03],"pp5o8kor77ff6vrmeylzdei5":["RRRSPSPROLYr1sxqruy2wzx00wwvttmktsumytouszswzwlx61wxywsvnptsxutrmsjuvvy2z22qwx72720w0wqpknoompnintwuzmoinjo1_usrswyohimkuqokmmyxwsuty0sw2520x000ojwuxtsyqrqvn9swowrvt4993xuvyousqrtropmrtpjiuqpvyrto55yv31vmpnrnpsyuuxzu0rtssttuzutusvxvkogimnoutxqqtst53ytyuumosrzzppopwtuqpty2xw050sps23xhKGGHDEECCCCCBCBB",127.04],"q0co2p6we00u5bereozzq67x":["PPPOMYXQOPLLLMJIHHJJJJKJKMMIJKLgqhgci2umaYaRRRRPRRTPRRWOUXaWXUVWPTxntXgbYgaTYUSPNMLMPNMQQQOQVOSqkkpuipmidZRYROPPPPLPNPOSTXWVVvrumZZ6mccXWWRRSQOTWQSTVPTXPYNZZ10ssib83sjZYXRPQRRORRRRUNXVcXVaTVVa_-iuggxtlhceTYXRPSNPUVRRUTPUWRRahsfVXZmdbTROQQNMLNMOPPNONOTPTNZTbTRRNRROPSRNPOOONPOQNMKJHHDCDBBBAAAAAAAAAAAA",69.72],"q4lab03cl8v7wvmqsl42tk4v":["zonhkyX_tVJgXVxp0gydLi_1omkyg_uaZ7cYyZmvz_o0_2vx_cz_xkp_no-_Wz_whg-36u9Z6_vvj_2n8_j6_9m5__09_u2__3lQ_p3_q_2_9ij_-7_w4k_ykQ_oi_0_x__wx9zhx__-voi__37j7l_rmk8_wy89p_ywj__93q5w_ymnx9_u6qb2_uyV__d7si_54_Nj_v7pp1_-zWV_2486_o9_25-3ls-_wzt_-87smw955sb571ur_t_yzh_874lwy4vta3__u_ld2_jvU_zbtcX_52nK_3VLECBBAAAA",77.18],"qiiec95nuxgcmxgbhs24pkx1":["_9968-999-49-95-7-99-98699-88999--8-9-869999-9-_8967-99-9-9998-79999--9_9997989-9--999----_989998-8--99998999---9879--98998----9-9797--989999_-6-9-9-99-9---9-9_96989-99--98--899-98_-9-99-9--99-9999-9997--99-87989_9-----9---9--99----9-9-------9----9_99-9-----9--9---9-5cWTUTUVWWXWVWWWWWWWWWWVWWWWVUEBB",360.05],"qjjouq59wkq1fn59fpjptlmv":["RMLNKJKOPMLMOMdvyqOMPQckcQQPOOWs33RVPPTsnhYQORUn677fRRO7672NT7bu876qZUQq76z6Wp544632x356253z5585045653563676305566652s57747703246705400715211tvz4eez0bZ00fcx1wj572lg50i370jl00d25_6g36g030qg10jp6-96r113677Yc3016665x54j37160x625160x0006x715466436633666z665xz565z75zy75716202367454307367325zt3cQIECBAAAAA",199.45],"qjw4ulaxb2zzta51np1mvj54":["AAAOMRNMHHHHIpVMJJIJKLMLxOMMLNMMONsWRRQnacZgUTSUWSRSRQjVSVbZcUPPRNKIIGcPRRTOPbUdYWUUXWVSnYbYRXXZYTRTSUTRPRQRWUSRN_tzhw33l0wduunyw0yvoj0u55v2y2xp2z47888684563088699_972y2344zx8579-757zWKIDDCDDDCCCDCCCCCCDCCCCCCCCCCCCCCCCCDDCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDCCCBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",176.04],"qpm9kd4crcky9tf8bxlkxpcz":["eddedieeklsv-----9--9---------------------9-9_------__----------_--__--_---9-_9-------_-----_----__----_-----9-_------------_------------------_---------------------_-------------------__-----9--_-----99-9-9---2mYUT----9-----9-_---9------------------_---__-_--__-__-_------_--_----__--_-_--7thUMFCBAA",397.46],"qytg829wh40m6mubamrwr95j":["Amnel_EjeenimrnnlpnmidjniilggpjhjgkjrdjggmnhrikpYgqrqlmejnljlhmijelhiielbiphnlnnlnhkipmlgwjlcgrisvijjgnooiijlijpljdhqktZfnhjojijcapwqineilqjnfkfkdmhjllianlenmjlpgnejnmnllqmbguporjghgqjnfpilgmdlielderklkmlmnjinprihuiolgtlv0jjleouljejiljnslgklnmbiihomohfedbnq9nbjjnjkhjleklciUibedXVVVRQKHGEDCBAAAAAAAAA",73.82],"rckbbih5dz6ym2ag77yqtqfi":["vqtywiwrmog0s0ttsqkpjpopyrixslmprkrjkomfjnmnlulnqprGx6t947x635wy763z15kzWLrtnknprnmgtsnxmqzmmmnxooosprqkfvrnq1kniofq83453395506875439o4955o8383897y6555546qvQLEVQQaTURRWSWTPYSTWTZdPFCo6085538855669419-4u846p959178504457y510t536z-67u67548895t5z2o944r828288506575v32zw755u664y9-9z8857t_6xp81WIFDCBAAAAAA",268.94],"rw800rw1tnd74lqf34p4um7i":["AAAAAAAAAAEEEEbSSJSWSJEtSSNWSWNSWNNJy2bSWWWJJtgSSJJJJJJJEEEEEEEEEEJJSytgSSN_WSbSSSNJNSNJJNNJJkbJJJENNSWNNJNNSNJNJJJJWWSNNJJJSSS2kWSNJJNtypgWNNWSNJNJNbbSSNJJEEENgkkNNJNJEEEpbJJEJJNJJtbyWWNNNJJJEJJNJJJNJJJJJEEEEEJENNJEEENSSSNJJNJJySSSSNgWbWSSNSSJgNJJEJEEJJEEEJJJJbWJJJJJNNJEJJJEJJJEJEEEEAAAAAAAAAAAAAAA",143.45],"s1jwv69bhaw7yup44ku6ew09":["ArYYVSKHFcXSKHGDDqYSPMGENZYRNKGEDmYMLVMKNWbYKGFDDkaWLKIGHZgcNOLHTugUNOISVdgdOJHEDscOKKGTRYSTHGHDDoZWXSNJIcZhWNKHFnkl0udptljfkjppohitvgpvnbtrilvqvmbjvwypifmbVSnrgidppvkejgcVLKhWjWVW0opjjefpqpxumhnyu7w8tv5npusqn6429wv15wtrvsmrx_24xy6y1yu4v6-10116wo6vs1umqx584vvu-0seTONHWQfZTRgrieWSgpWbODBBAAAAAAAAAAAA",199.55],"s34h0ztczhxb6029ipehzvse":["x-i-l-q--t-q-p-----p-l-p-m-t-------------_----------------------------------------------_-------s-p-i-q-l-n-o-----n-l-m-p-z---------------------------_---------------_------------------------------------------------------zj5qsjyqlytntjwvphaeucfurhbiqfhx1urv5swtsXTRlVUOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",200.47],"sirj6akt1j5awtqfhpcppu65":["AAABBBBCCCCDCDDDDDDEDDDEEThXQRaRNOVZQdYTYUTXPmkeienhghijldjdbWdajmjgmrdfRhkimjiibXsu230wv12y0rtsrqxelhbTUWWikhklkhdUcojngkhXWbcgebeecXVZciccceeYi6w23qy9y01wwvvx4xuxt24z4w-v-560t0yoTekYjcXRZUbWaXUcVYTXNUdnhedficYgYginefdYYjdipeiehddacYbgffYZh-9x87_9-46_-9-y_v--_5_94_4x64--73meiilXkZWZSMCCCBBBBAAAAAAA",178.52],"sm2v83cgm2vqvd01wznezy1b":["AAAAAACCCCDDDDFrOFUHwUJKDDFTxMPKwiOPHHFFwMRHPsOYMFDDpaTRJ4PRJDDDxbMMJsORKHDDwPRKJwUsaKfW1bMWKwRRKJHJ4lKTPnYJPFzUHfRnWOOMHMKzaYUrlOYdaWU1YWTO2UTMKHHwfdlT4WYdOKKxrPbOzUkuRRKzbPRUziuiMgY4bMWMuWUOHJK8kPaRslOMFsTFUJpYJOHFHH4OUKuiOTKHHHwORKKzRbRJHFwaUaM1RWMFFF4iMUKzPTOOPJ2UUMK8U1dKfW_bKaJsTUTFHH4sKWOwgKRF",194.14],"ss7c20bs92n0bff0bgd9v5e8":["53723o969998986496999978998999994z8999999959988999999999999q8599889994899999587999999989966999999999999895998999999989999999999992999458999999999999898999997999v48988997998999999999999999999899999999999999999999-___8_____-8________8______018____-6w899-_-_9___________-____-__________4ypZeaSNJFFEDDDDC",163.11],"taq0iewg81b5xsuoob3uadpy":["KKKKZZUSUSSXcXccXZZZXXZecccheheojrhemjwomjejjjcooommhjjmhjcjjmy61tw66otmrmot18ww33_jehjmrhmoywrrttojjojw1ryrjohrroomjmyjoeeojoooooomorrwwwjjjyo3jwoymromhtmm1worw3mrmmmjmjjryywtroejjjjjommjhoorooyor6_jrmrtrm1_rojmojmmrcXecUecUZSXUUXSZceZXUcZeeXUUehcceZXZehhcZZejjehejhhjmojjmhececjXcchXSZXSSUSPNIAAAAA",214.83],"tbkyg6greqbc62ftbg2cnzq0":["AAAAAAAABBBBBBCBCDSYQKEEDEEFEHgjTMHHIHIIHLagdOLIIHJIJIJloWLKMNJJJJKrkWRFEFFHNKPnqYSNMKIJKJGqnaRJIHqeaONMrjWTPOitWMJGunXRHFrsYQPPnpYPPOmqbSVQvojVTMMNQLJGFCBG7ulebS94kWVU4vmabX52mfdY54lgab_2oZcg02oida98rmkqr9zonxr63nmto25twoj89tutx64qwwq71wvmoy72uwt77vquz064uw0v--410092zuyu6850wvufQGDCBBAAAAAAAAAAAAAA",152.83],"tevmwexeh4zc7rql3ofxfg05":["Pl7x614050tvx5z1xxvqv2vssr0ppssrmqps0zts0wjpwxqrtwq2upowysvh1hqokvhpsjjql0jvwv0xtx3uzttrwsvyvu3stqtpxrzqusux2vuurtvtvqkntjrkuvjimupskujwxouxxsssprnrw0s8rtstztsptqintvptr040_xv230w3yzv04ynlghYgXrxsrpnrusfgrppotliu5wouwqqrplzpv1zuoqwwzwstzo43yw4rzq0vuqrwvvpttr08u125pzuqqx5w11w1oxszt4n3p3XQKGDBAAAAAAAA",194.47],"tfwkrate0o50d8lo80q57e8e":["AAABBDEGLNTRSvmaVWXTYZZUWSQ6edbchcbiZiYWtbbWWXbZWRWU9pmXcdpVsk12qVcUZUTZlc40geatkprUa0eXgnjgbd_hehupkk7jqnikZZZ1lbgUvnlbYvw4rwopXUnSumniw2tjkkzxupykm3l-4hxqup1njjX4_3qhSZuyreuw5ndbkpeehxyz1Woyyx5364xndryl-zmetryz6klszoXt4gUju72z2pcaSb5592s3w87u7u75zoup00scp6upWdeW2yarpend4ny5nsd0fWSWTUWWYYbTPIECBAAA",339.46],"tli77207qkqxhaxmivay2kex":["AAAAIEDIKLNLPUNRQPPNLONILHNIIHLJKIHMHECMLFEHIECCCBBYNJgbcjUzctZjZkUtgcpfjkWVjZgpYgcZVWpWg2eagUoYyW3eamWanadZjgdqaT_UUgbpZgcjlbbUZcVXWhUWrad7jaajapdlkjf7eabpYfeheybcZVRRPONMLT8Xb9VghdbeaxjgpbpjtgjhlnpsYrnaapaWgXcjakelfkhcohccig3alZxYXfTWaafcaWboWWWRrmaeZYa3RXYbYsbWTTTURPNNLLLKJJIHHHGFEDCCCBBAAAAAAAAA",44.14],"ttwoexcxxipv4rn66wxhmls2":["FFCCFFFFFHKPPPWbY1ibTTTPMupWRRTTWWkRTPPRRTuWTnTRPRTWRRPiYRRi1TbTidRPPPPRTYbdWRPkYTTTbdngiYYYwuYYTRYsYWsdbidgg4iiiip99gYbYWR_p1gdWkTWWYzibWpWYbdggbkdbsgnYbsi6gWP6uddWbkYbkng_wnkd9sndbY6znYYWYbYbbgziup4k1unsdigdYzYYRRPPPPTWTTWbWTnTYgdg1bdkdRWibTWTTWRRbRPPdWWTWRWTgWPPMPMiRMKKKHHHHHFFFFFFKMKKHFFFCCAAAAA",292.94],"tyonu2olzl6wihci0avdo3im":["FVLJYKbRQ0ZQWXcVPRVPwYZZWiSOVSIvZbSQbOOWL2ZXdQPdZbRSxYKWQaXOUYLxZcXYlQUbgxcbWccgZVZR5aRVOgQMXQO0aiMNgNNWQugZYQSaYYgcwdSbRcYRiVUxbWRQcOaahSvaeadgSbjl2UdeXPcReoevYgZXdWRXVSxZdONgNZaP8XZgeknehbX2ZNZVpZSdSS2bXVSkMMeY1lagRVhZXgewZdYRScceLXyeXRQgOWicXvVaiVtSPUV_abXUSZScOX2aVZggaaXca2ZVQMJGEDDCBAAAAAAAAAAA",80.09],"u2mpxhbpyuvn3afij0ze9vo3":["EEEDcUUXdYNGbcXVKJVeSZTSYdXcbONPOcmihffSRfgeYVObiYYgPeiefgRSKqlljwljbrq0kmkikhsYmomllogowqstxrp0ytmtqpxuy-010tsiz9548tmvz03uu3-y5m7w4yqztssqrjpmlrsrtp1voov150u8y8u18347193yy79ztz145s26z5186u49906-95950-577946u244550_769957485874482z1orowvrtx0q4sppnjtypsf744kdcrtumibgmuqnojVURGFidYijPFpiTPOJDAAAAAAAA",313.97],"u3wzz2irvyxrvlar00im18zf":["FLpngdbgikltlmn7bRIFEECDCCCbZdclRYhXdfgVYhlkdkdbWbghmbaelhaljaddfaVdTehjgehbYdafdhgdkikkrhrnpxmkdkrqomtwjnw1xqpqorlejwafkehdgltxqsjlkiiilgudfmztq1tqq02wrlrzu3tqrqr0vqu0wxxrnn0uwvmuinrql1zq0ntjn0s0qhptyouhrf2rhonlu4nlmuhn3mhmqehwtqr3lvqt7mweiq03oupqjrro1npw2os_ujkwtmoou10txt6riuvwoxil14oaROKHFDCBAAAA",90.03],"u5zcg7i207ewgl0arohe8xqz":["_9-99999-7-9-_7899_99-9--7-89-78-8-97999_8_99-7-999_8-9__8999_89-9-_5-79-97-9_8-9-__--999Z--9-Xk-9--a-9---9-9_X9-99-d---_d9-9__999--l---_24_-_-q_--__-_--s-9--____---_______99--_99_-9-8_-__-9__-99____-____9-__9-9___99--__99--9-8_9_-99_--9--_9_9-9__9-__-99_--yPJHFDCBBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",92.09],"uoivuv3fxeg1q5tne7194sr3":["TIDCDDDCCBBBAAAAAAFJJKNNLKKHGECBBBAAAAAAAAAABBDDCDBAAbbGmJCBAAABBBBBBBABDFHJJJIHkXhoHCBBBBCDDCFDCCqTnaFBBBBCDDEFGHGFfPjVHDDDDEEFFFHHJJmZ7cUPOURPOPIFDDDCBBBBBAAABoWmVkaVdUuTqVdUUWRxixYlWZYVwdnZhVXXVndsikWWUywYocbXaZmokzlggmooykzikoqo4zjqk0o2lkqi5l0s634_TJFXUZVORFDICBJBBKAFVVUVTPQFDIBDJAFDDDAEAAAAAAAA",146.59],"upijcof3rto1x4py5lo6mb2o":["EEFGLMNLJJJmUSNMhVTQMloWQQRJMKNJsqlcTadaXTPhXQNMMJLJJceWTPWeTNMEkaYZbXLHFEslddacrYKIHulbcbYPHFFFnTaZa1VQKFZcZbZdWJFFEophedsiQNLMoYbdecMFEFnledgekaSMKalrss2paaepiov_6uhdceok1xyzoaYYeXXrtuyteeZsymnn6raXSO3ojvpvtdTUKvifgcXUNLLusedheqYVTNxigfjiUQLQN9ptlm2eWhq16ebdVWOUXc6jefaqlUXVOVWSRQOMLLKJFECCBAAAAAAA",144.75],"uqxyxvbkg6eyive8q2tf2l10":["W----y-----4----2-----s-----------x-----7----------5-----6---------_-7-----1----t-----x-6---------2-----5----------------6-----1--632tjf499-vfZ-3ztvke-3-1y-6--x9209----6--9--9-----8----------w------------------------------------------734tjm8--72he5365qpkzwy2t7z0-u64-6-----3----1-----z-----9fOFBAAAAA",229.36],"uymhgvteu1iiaxter1ogr2xb":["ANJIMIKJIJISMNSOUZfeUVfWTUfmlcTdXQXYSdaTUXYkdbWWlbeeaXhmz0929y850n19r84_1jy2f_72127k-8yw4-0p8u93tnh96ylqytz3t1wtum8vy3xrx7v4q3twx4ws75vr33x270t2554uscSRsoRo1t11qPMj0Rc1na0xPMwxTmp7vluQLJFDbm609787_895986458416-48-949755--3-965898y7208_-irikjfmfhflronxstrwwskjongmhlotvmcinsywllswkYQOIGHFDDCCBAAAAAAAA",113.88],"v1b40rv16q19rcihmejg0u81":["YPVNGCLMSOSVTQYbVXNaUQVWTaOSJFTWWbVWWRQTNQRXhZXQk-------9--------wv----9--_N-_qn-8-5----9-8---98nl-_--69--7kgbaflfiagalghgbplijnht-9-3-_-9--9--999y-----99-99fvl-ls8oo99q-unu_q8n189nTQP_--9-4---594s--6--hjfxihcYaZaggjbjnojmkckgjupiicdaZjomkhicoplegjlxgnsv--9w---9--8---99xs-----9--99Vp9y4_yq--IAAAAAAA",165.62],"v5s3906euq87dtx5t2asxfd4":["AAAAAAAABXXacjbVPhiXTpcVTeWZaoZTPaZaSfVWNOOKKlhdYlgellfbUleclnhaXhgbdmebTPONNeXSWXTPNdWRPZZRNWhTROcVQLdSNLhUQPNLKJgljizuiimvmbc1lemlnqitojesfZTPMKX00hknleTsmfemqeVY0iaXxjbbumbVrfXRONLJttuivvkix0mgr_mimlemq4ljgebhURPOM1xmgnmZW10gaswkgZ5idWqgaT5tgWrkmUSLJFkfbanoieeggUombYZrhbXhZVSSXVROOLIFDBAAAAAAAAAA",170.03],"vcb7aiklyq78zcf5y9dbxalb":["AAAOHPIFFJGELGECMFMIHJHKHFFOGFMHRQOPLKOMJLLKJNJHOHFLIFFLGFNGPahQLLJHQIIIIgYOJTTOMJMJJMHeXURNQXUMKMJOMKNLIJIHQLHTyvsjfOLTKJMJVSJQLaOLMOJMMKPJaXROKQOLJLJJLJJIKJKQIIJMOZ7xgcVQRMNKWNJMelSbeRQONQMMLOfoTTQNRigQOMSMKKMOaYPOaOPs_1opiQQPOKONcWQWSPMMRNOMLSMParXWSPSQSNMNOMMLMLJKKJPNLHLRQKLJHGFFFEFEDCDDCCCAAAAA",98.09],"vf0wj6fdp8jiaxojovj0szyz":["-5-v9tm---4_s_u8---9_0_vl--97_1-w8-_-s---9q---W-y--9_--d_-95x---p_y___-iVZWWZXifZcbjgjijfiiarinmflltfrm-__R_9t_-98--_9v-_-99-_7q__7t9-_9q--_8-__7z_-wW_-_5v__x9---98-_xp9_-7_-_y9--_---_9w--_9-z-_-_--6--_8n_-_995--9_8XYXSWZgiYcajgfjjciidrinnahluhprzpza--Z_--95-_-n_y_9----p__-4--_9n_f_9--UGCBAAAAAAAAAA",164.13],"vjzdqyxde1v3980xxtk3fz2y":["TQUSUWz-4v_w4vzofVkrZovktXfeeXbiXYcXTdoilWZKIGIGCGJJKLXumksflkpgZYaUafeGILNOkjWLVkiVKOTVZVQPNMMpYvbmwX01a4Zfta1wZzmbsb0zi0datg-5mbFCCCBAEFDFCAACGECBBHIHDEDFHFDGIEAFJIFBDGFGGGHIKIHBAABDCCBBBCBBDFCBEMGDFFIFHFGIHFIBBDFBAABBBAAAGHDDDDDFGDDEIHFFEDHLOLMIMPQfdVVOFIJKMIGJKKQILHEMLDBAAAAAAAAAAAAAAAAAAAAAAAAA",450.12],"vtkgol7ssumaqx2j2r1d4sbo":["AAAABBBBBCCBCCBECDDCCDCEDCCECEFDDECDDDDIcZVcPFcbckVJFdpjYVdnoaWQknYYPniUMIECcfZgZTMsWOVoSPGCifhkVjifWksjfZvobPTknfilujme20qgssgRFVcdTPgyjjaiieadiwkcSSaWPJEEmcjkmjaltvfenkzlcgouqunpqsjttsqplngjpnuuqrw0nusuwmluuoxw6y3x9t65130nxx6px403uzuzvs5v1qw0tsro12u0t6z__z5wt0uwZKjaSLMJECsrPIESKCRzRZSID3eHDSGCBAAA",522.97],"vu1y4lzrareiez83adhagsdo":["EEi000w3z01zymzwvz7y8w80wy8610t82wu885qy82sy7z2E82988878887888888888-887788889887778687889-8868888887886788886897187878888788888788z78388857818687757875388757864878747787688576772288773835w34277767y876877745877588388_7188877887278865884798739854588484887477458771686078887877830okfbXRQQMNNLKKFFAAAAAA",198.03],"weuz2v49ynh06xg4ymf72y4n":["AAAAAAABBCDDDDCCCCCChZXRMMIJJGELagcRfLXLKdaWPOkdaTPMIFGECBBBBCCDEDDDEFFEJZkXSUhcNMGFFGGFFFGEhTecPKKJSVjZSNMSMMJHWXUbMJUTUXbTSTMTUMLMLNRYWUZYYRKMMEFGFEFEEEDDCCCCCCBCCCCCCCCCCCCCCCDEDDCDEEEEFFGGFFEEEFGGHFFGGHGGHJKbcXXaZcZcaacimovqwt26507_378890yrnwhXRMISSEGEDCABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",116.04],"winjkkc652g4gertc7150y3x":["AAnCI6Cd_powmruoaxTcmiyZk_YToygudjhhgntzciohkxjbxYogttzzeuzpgi2xhtcoaoqylgjzbcyushghvRgyon2dzddlxkhkockckqyhcwcethpvm2VURcZUe4pdn2xZrcqWlqy2benonzeZltSmVzijxPd0Vhv0aqRqZzegtgUj7UYn2elTtUXoedvgunRWhmXlmuQTVSTOYkadbqgdoVpSVccTQQyXXXqaqbrgWbbYYSVzpgcljoZqWWZWUSOWscaanWiYjWUSWVRWRPQSOPDBAAAAAAAAAAAAAAAA",66.14],"x6vqlcpzp3tpbt7i8uhekjyc":["FKHHMMKTPPMWWRWTYYbYRbYRYYTWTYWbWPTYTYWbWgWWWYWdgbgdginndkddngYigdYibdWTRTbTdWWWgkTWdbbibYbbYgYYWWgWYbYdYgbukignbkspngiidiggknbdgdddgdYkdggidkdbbYgWggbibYkpYspggppdpnkkpnppnpwsugissiskknnidigYdngWigdggginkiknbnkgiggdgddiTbgdkgigsuwssnkznkskku_4inignnbggYWidYdTWTbgWRRbdWPWbWMMKHHHHKHHFCCAAAAAAAAAAAAA",76.39],"xiew6lxkitfxdsvtw8h3bmyi":["N99h98599n-92996-4-87-7s78v95X89V88O98V77S97W86Z1-d82Z8-d85W97j93Y98m84Y88l87m787-7n69v88h8-t--8z-474x786828-99766-79d665499l99579798p87l-9n88698i89s98889y97k69u6-09k69-189h88y89m59l8-g98x9-z88z_888897495r79v--h89b89179g-8u98m96i79r87r7-s87699r96u-7r98s68l48n8-r85t_9878157x9-s884962577q89946eDBBAAAA",96.24],"xm5zfjgq7lz9soc4i6o1zbxx":["AAAAWqhDBAAAAAAtURBPDBZDBARDBOMUQeNLNJNSEKJMCBAARGBrbz-dK4V5G-__Z1WNieUR5eySmumirYW1q6W2OVOnU1i--d5N50t0-_czWFiRUY2q4MttTzRVR7p0Y2WMnR5sj-Xc5q_XreyeyPWMjac6U93mWwUrZT5s8h2bYYtr1q4-dL3e2M529gwdVimgh2u4enzmxheb5owg4addwnzq-tc3c5a19-wWydUimd2bh2Wuz4sdyemSPRKFDCBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",68.62],"xqqgiox1v505hdnghc0j5m2l":["iilrooejqkhhqolljgmmqmhhknhhikoqqzuyt4zu14433z3y235z2167zzz7252y28y362x336129z6264587784266726-6321871332208612974z130-9437--79554569-50695949654395--7949672085678945_878965975749959756816397z659374796_91568-439563362653048531596-345--326369887370z6463zyz6unxy5wwxkqgjoficeXTUPMLLKKHIHFDCDCCBBBBAAAAA",236.15],"xw82a3pnbax057lbiopi63qa":["AAAABBBCDCDCCBBDDCDEDEFFGIILLONTXdkgnoimuusvu4plntrqt3ttr31rrr3ww0wwo_37pp3yuzr2rx0w5w3-35uow0tvx71py-1v1tvrrxwt5033wo31stt0yqt050p1vutu00qowwqtrsuotwytqrtxmuwzprtypsrytpuyswyw-30wvusy1utq2xqywrztutttrx3prrywywwztyzytvxw0w0z3wvzwtwvx3wywwtuyupwwtvwuyuvyxuppywtrrtuplprtomigemdiaYZZWSNOJGGDCBBBBAAAAAA",313.08],"xx81keampqxnqs8h47xatern":["AKhTOSQPtNRJRMjQNIOR7ZTHORqbWTZX2WPNYSicPMJHnjeVGQGiSOKMIzWYWYOygSMNImcUMOIsnUPPLuhUSUUpnWOLLbWFDCBMeTTQRWtTRPbSuUNJPI8hTLOJfkWWUZRuSRMYLnWTPSTtdUORKoXXSRLgWgYolrdSMMR0jYMTHheROSNlYMMXROgSMLmJbGDBBNmhZWbXqeSNaUriUQRIpxRKPPYrWTUcW1VeOhYnYZNWPgQPISPkeTNMLoikaia_taRLIcbSQILP3kWLMIeUiRjTpZQKlMpkVMDBBAAA",106.01],"y8sget0b9g4vdr16kz830ns5":["-ooz-qov9rk8-Tmj-tk-8oo-7sm-rkb---8-----9--9----9-9--------Oo6---9----9--9-------------8---8699-998-------8-6-----------9mot--8-9----9-9---------_-------9---89----------999--9---998--9----_------8---------_---9-----8-----------9-8-9--9-4-8s7y4-4-62wx44-2-3460058-04q067-8---988988-6298--2UIGFMCBBAAAA",145.37],"yb1jgpfqksr0g9shkbn0h2it":["AFEIGONLJIHGKLFMGFKLNKNGIMEKDRIKOKMKMLLLPQNZSZVkkie2jkn-93yixamk2mmr2skh23tuo9kifthmo7toq_21vs2qkw-wos7llhpfNKe1hgUhbMOMVf05WZbsZdUvaRWokYjtuaVeqkgSpZUUkjWrttVRfqYWRlVMPoleWalOeJkUOZlZPeldcWTeOKkqlYVgWVPkbNZhqOPepceUeeSRWUVaOZKTKlTLKhZDBBAAAG-hduxgxlxhWYbYUaa4gefvhtYrkVPWbQeb0aeUsXvWqiLHCCBAAAAAAAAA",69.31],"z109vgif9gld57o92tzopzbj":["AFTbmjnkmjghcZYWRQJFCAAGTUUYYbeghmnnmmemmZOFAATchjgejeegZZZbbYUUTQICAAAADRWYZUZWUZcZWWURRROLFAAZebejkheccbZbTQNIDCCCOUUYbebgccUZbbTTOJGFCAFLLQUbbbjkv_65eLFCADOROUhjjhhmgZebZUQGCAJRbgmnkjkmnkjZYONIDCACQRTZgkjkhbZZbYUUNFCAAAJWWWZUUUWZUQOLLIJJGDCFLQTbgjegbggecnpskkjmmjgbbNOZcegpryu65yxxy05y0xxncUOFCCAA",126.6],"zco48v627g591r6tgu2vz8at":["rjhbolfjSubeabohlV0nkhSqdYQaqbjWqhYdRw8ggopwjak1lcko-qog17hcWrkeuqvZjprtieQu7gnpwdjZwjbkXo-mhzu4fbrkdksptjorhsffx8ggopxjbumfckp9nohv6hbqgkcruxdjorsfgNqjhbolcjRubebSohlV0nhhRqdYRaqbkWqhZdRw6ggopxjb1llcjo9qne18hbrgmeusvfiortiebu7gopwdjZwjblSo-mgz4ofbrldsapujortifgw8hoipwjctkgclo_oehv5hcrekdruxjiprsffK",108.22],"zdvsmqryp4gzgb74mwnlb0s7":["iQHCkTPGFjSQGBmWOFCnbVTOmYQNNmVRYqcYYOmaePPqaYcWmcYVNseXaQqYSXkgdaSpkeSPtbWSVvjWSTshWTQnZVZVNJJHUQbaVVigcWjcWTeXXjbTipaqdngfjiYpmqhtqZqqweeggjnoqqqdohlkhjol3xkplosyxqhnsfpkdrivkqnnlhqptzciljsmpvrhlsqlmimjspwsnvhu95v_4w7-0yvvgmppmppuv7wvzvr3w4onuqqgppskqhdXWZZcdbZNTUPQNMJJECCCBBBBBBBABBAAAAAAAAAAAAAA",223.23],"zvnhd7u0gpuiddojeabxs415":["FZCFEHHYEBHFGFZBFGHHYDBHGRbMZLMPMVHbHNQbZNKJRIVHaNHcbmeWcXVKcfabXbjdYbZVdacecbTpcYXbVbcZjdbkkddZYVbfgbRsYlcgtabevcmc0XiceyZagvoeyuonnrtstromuswpptsslurlo7-6655-9_3976_9-4975-87_894kw532ovty-4srmsx3w0ksy67l0503n359u6y0smivwutrr092s33ks3ro52zbX4893-77___0-9---5961__5996-__7758_--9659__9-5-9-5-78fICBBA",235.05],"zxp4whavfuth4gd0sskbrmhq":["AAAABBCCDECCGHGFDCCDECDDDEGGHHECCCEEECDFGGGFDCCDEJOahaMNKLLLONUORhpXUVPOPMOPHXrqffbfjcbdhbepnhbcbedcfcgfosigdfhggogdhtrmeiihieeeejkojhedghghjegoxhhojkmggejjgebQLKJNMPMMWccTPOOOTRQQPYejbYYYaZXVYWbceemppmrujrxrp50xs03_usuhnm5pixppstpyss5xkjmjgh0y42qou8rxouro24rtpwptmijhclokpor5qooeVPORZhhedWTLFCBAAAAA",157.76]},"web":true,"gemUrl":"https://old.franklymydear.dk/blindtest/gem.php"};</script>
+<style>
+#velkomst { position: fixed; inset: 0; z-index: 50; background: rgba(8, 8, 10, .92); display: grid; place-items: center;
+  padding: 16px; }
+#velkomst .kort { max-width: 520px; background: var(--flade); border: 1px solid var(--streg); border-radius: 16px;
+  padding: 28px 28px 24px; text-align: center; }
+#velkomst h2 { margin: 10px 0 12px; font-size: 22px; letter-spacing: .04em; text-transform: uppercase; }
+#velkomst p { text-align: left; margin: 0 0 12px; }
+#velkomst p.lille { color: var(--svag); font-size: 13px; }
+#velkomst label { display: grid; gap: 6px; text-align: left; font-size: 13px; color: var(--svag); margin: 16px 0 14px; }
+#velkomst input { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--streg); border-radius: 8px;
+  padding: 10px 12px; }
+#velkomst input:focus { outline: none; border-color: var(--accent); }
+#velkomst .knap { width: 100%; padding: 11px; }
+/* A/B-sammenligning som opgave i listen (samme opbygning som en søgning) */
+#ab-flade .ab-par { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 640px; margin: 6px 0 10px; }
+#ab-flade .ab-klip { display: grid; gap: 10px; padding: 16px 14px; border: 1px solid var(--streg); border-radius: 14px;
+  background: var(--flade); text-align: center; }
+#ab-flade .ab-klip.spiller { border-color: var(--accent); background: var(--accent-bg); }
+#ab-flade .ab-klip.valgt { border-color: var(--godt); }
+#ab-flade .ab-bogstav { font-size: 32px; font-weight: 700; color: var(--accent); line-height: 1; }
+#ab-flade .ab-bar { height: 4px; background: var(--flade2); border-radius: 2px; overflow: hidden; }
+#ab-flade .ab-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s linear; }
+#ab-flade .knap { width: 100%; height: 46px; font-size: 15px; border-radius: 10px; }
+#ab-flade .knap.valgt { background: var(--godt-bg); border-color: var(--godt); color: var(--godt); font-weight: 600; }
+#ab-flade .ab-lige { background: none; border: 1px solid transparent; border-radius: 999px; color: var(--svag);
+  text-decoration: underline; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+#ab-flade .ab-lige.valgt { text-decoration: none; color: var(--godt); border-color: var(--godt); }
+#ab-flade .ab-sek { color: var(--svag); white-space: nowrap; }
+.m-ab { flex: 1; display: flex; flex-direction: column; padding: 14px 18px 24px; gap: 4px; }
+.m-ab .prompt { position: static; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+.m-ab .kunde { font-size: 22px; line-height: 1.3; font-weight: 700; color: #ece6dc; margin: 10px 0 0; }
+.m-ab .ab-par { max-width: none; margin-top: 12px; }
+.m-ab .ab-lige { align-self: center; margin-top: 6px; }
+/* Slutskærm, når alt i pakken er besvaret */
+#tak { position: fixed; inset: 0; z-index: 55; background: rgba(8, 8, 10, .94); display: grid; place-items: center;
+  padding: 16px; overflow-y: auto; }
+#tak .kort { max-width: 480px; width: 100%; background: var(--flade); border: 1px solid var(--accent);
+  border-radius: 16px; padding: 24px; text-align: center; display: grid; gap: 12px; justify-items: center; }
+#tak h2 { margin: 4px 0; font-size: 20px; }
+#tak p { color: var(--svag); margin: 0; }
+#tak .knap { width: 100%; height: 46px; font-size: 15px; border-radius: 10px; }
+#tak .m-flueben { font-size: 34px; color: var(--godt); }
+#besked { position: fixed; inset: 0; z-index: 60; background: rgba(8, 8, 10, .85); display: grid; place-items: center;
+  padding: 16px; }
+#besked .kort { max-width: 420px; width: 100%; background: var(--flade); border: 1px solid var(--accent);
+  border-radius: 16px; padding: 22px; text-align: center; }
+#besked .fra { color: var(--accent); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin: 10px 0 8px; }
+#besked p { font-size: 17px; margin: 0 0 18px; overflow-wrap: anywhere; }
+#besked .knap { width: 100%; height: 48px; font-size: 16px; border-radius: 12px; }
+#velkomst .kort-tekst, #velkomst .saadan { display: none; }
+#velkomst .sprogknap { align-self: flex-end; background: none; border: 1px solid var(--streg); border-radius: 999px;
+  color: var(--svag); font-size: 12px; padding: 4px 12px; cursor: pointer; margin-bottom: -8px; }
+#velkomst select { font: inherit; font-size: 16px; color: inherit; background: var(--bg); border: 1px solid var(--streg);
+  border-radius: 8px; padding: 10px 12px; height: 46px; }
+#velkomst select.mangler { border-color: var(--accent); }
+#velkomst.med-intro label { margin: 10px 0 4px; }
+#velkomst.med-intro .knap.primaer { margin-top: 14px; }
+#velkomst.med-intro h2 { text-transform: none; letter-spacing: 0; font-size: 22px; }
+#velkomst.med-intro p.intro { text-align: left; margin: 0 0 12px; line-height: 1.55; }
+#velkomst.med-intro .kort { display: flex; flex-direction: column; }
+#velkomst.med-intro img { align-self: center; }
+#velkomst.med-intro .mere { order: 10; display: none; margin-top: 8px; }
+#velkomst.med-intro.vis-mere .mere { display: block; }
+#velkomst.med-intro .saadan { display: block; background: none; border: 0; color: var(--svag); text-decoration: underline;
+  margin: 12px auto 0; padding: 8px; font-size: 14px; cursor: pointer; }
+/* Mobil: kort velkomst som en app – logo, én sætning, navn, Start lige under feltet; resten bag "Sådan virker det" */
+@media (max-width: 760px) {
+  #velkomst { place-items: start stretch; overflow-y: auto; background: var(--bg); padding: 0; }
+  #velkomst .kort { max-width: none; min-height: 100%; border: 0; border-radius: 0; background: var(--bg);
+    padding: calc(40px + env(safe-area-inset-top)) 22px 24px; display: flex; flex-direction: column; }
+  #velkomst img { width: 64px; height: 64px; align-self: center; }
+  #velkomst h2 { font-size: 18px; margin: 14px 0 8px; }
+  #velkomst .kort-tekst { display: block; text-align: center; font-size: 16px; margin: 0 0 4px; }
+  #velkomst .kort-tekst.svag { color: var(--svag); font-size: 14px; }
+  #velkomst label { margin: 20px 0 10px; }
+  #velkomst input { font-size: 16px; height: 50px; }  /* under 16px zoomer iPhone ind, når man trykker i feltet */
+  #velkomst .knap { height: 52px; font-size: 16px; border-radius: 12px; }
+  #velkomst .saadan { display: block; background: none; border: 0; color: var(--svag); text-decoration: underline;
+    margin: 14px auto 0; padding: 10px; font-size: 14px; }
+  #velkomst .mere { order: 10; display: none; margin-top: 8px; }
+  #velkomst.vis-mere .mere { display: block; }
+  #velkomst .kun-tastatur { display: none; }
+}
+header > div:first-child { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+header > div:first-child .under { flex-basis: 100%; }
+</style>
+<script>
+/* Fritstående udgave: siden taler ikke med en server – svarene laves her, og karakterer gemmes i browseren. */
+(function () {
+  const D = window.FMD_DATA;
+  // Webudgaven: testerens kode fra linket (…/?t=thomas) – bruges som id, så vi ikke behøver navne/mails
+  D.kode = (new URLSearchParams(location.search).get("t") || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
+  const NOEGLE = `fmd-blindtest-${D.runde}-${D.version}${D.kode ? "-" + D.kode : ""}`;
+  let tilstand = { tester: "", bedoemmelser: {} };
+  try { const s = localStorage.getItem(NOEGLE); if (s) tilstand = JSON.parse(s); } catch (e) {}
+  // Pakker (Filmskaber 01): hver tester får 2 fælles + 8 egne søgninger og 5 A/B-par – fast ud fra navnet
+  const PAKKE_LINK = new URLSearchParams(location.search).get("pakke");
+  function pakkeFor(navn) {
+    if (PAKKE_LINK) return PAKKE_LINK;
+    let h = 5381;
+    for (const c of navn.toLowerCase().split(/\s+/).filter(Boolean).join(" ")) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0;
+    return String(D.pakker.pakker[h % D.pakker.pakker.length].id);
+  }
+  if (D.pakker && tilstand.tester) {
+    tilstand.pakke ||= pakkeFor(tilstand.tester);
+    if (tilstand.pakke !== "alle") {
+      const pk = D.pakker.pakker.find(p => String(p.id) === String(tilstand.pakke)) || D.pakker.pakker[0];
+      const raek = new Map(pk.opgaver.map((id, i) => [id, i]));
+      D.puljer = D.puljer.filter(o => raek.has(o.id)).sort((a, b) => raek.get(a.id) - raek.get(b.id));
+      D.mine_ab = pk.ab;
+    } else D.mine_ab = D.pakker.pakker.flatMap(p => p.ab).filter((x, i, a) => a.indexOf(x) === i);
+  }
+  tilstand.ab ||= {};
+  // A/B-sammenligningerne står i listen mellem søgningerne – én efter hver anden søgning – og tæller med i fremdriften
+  // (Steffen 2026-10-27: på lige fod med de andre spørgsmål, ikke en skjult bonus til sidst)
+  if (D.ab && D.mine_ab?.length) {
+    const ab = D.mine_ab.filter(id => D.ab[id]).map((id, k, a) => ({ id: "ab-" + id, type: "ab",
+      kunde: D.ab[id].spoergsmaal, numre: [], ab: D.ab[id], abNr: k + 1, abAntal: a.length }));
+    const ud = [];
+    D.puljer.forEach((o, i) => { ud.push(o); if (i % 2 === 1 && ab.length) ud.push(ab.shift()); });
+    D.puljer = ud.concat(ab);
+  }
+  // Dansk tid ("2026-10-24 01:08:30") i stedet for UTC
+  const lokalTid = () => new Date().toLocaleString("sv-SE");
+  function gem() { try { localStorage.setItem(NOEGLE, JSON.stringify(tilstand)); } catch (e) {} }
+  const svar = (d, status = 200) => Promise.resolve(new Response(JSON.stringify(d),
+    { status, headers: { "Content-Type": "application/json" } }));
+  function pakUd(t) { const s = []; for (const c of t) s.push(D.tegn.indexOf(c) / 63); return s; }
+  const ægte = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    const u = String(url);
+    if (u.startsWith("/api/opgaver")) return svar({ opgaver: D.puljer, bedoemmelser: tilstand.bedoemmelser,
+      navn: D.navn, ord: "System", ord_lille: "system", skala: D.skala, spoergsmaal: D.spoergsmaal });
+    if (u.startsWith("/api/bedoem")) {
+      const b = JSON.parse(opts.body);
+      if (b.karakter) (tilstand.bedoemmelser[b.opgave] ||= {})[b.nummer] =
+        { karakter: b.karakter, tid: lokalTid() };
+      else delete tilstand.bedoemmelser[b.opgave]?.[b.nummer];
+      gem(); opdaterSendKnap(); autoGem();
+      setTimeout(sjekFaerdig, 1500);  // sidste svar i pakken → takkeskærm
+      return svar({ ok: true });
+    }
+    if (u.startsWith("/api/boelge/")) {
+      const w = D.boelger[u.split("/").pop()];
+      return w ? svar({ streger: pakUd(w[0]), sek: w[1] }) : svar({ detail: "ingen" }, 404);
+    }
+    if (u.startsWith("/api/resultat")) return svar({ faerdige: 0, i_alt: D.puljer.length, modeller: [] });
+    return ægte(url, opts);
+  };
+
+  function antal() {
+    let klar = 0, alle = 0;
+    for (const o of D.puljer) {
+      if (o.type === "ab") { alle++; if (tilstand.ab[o.ab.id]) klar++; continue; }  // en sammenligning = ét svar
+      for (const n of o.numre) { alle++; if (tilstand.bedoemmelser[o.id]?.[n.id]) klar++; }
+    }
+    return { klar, alle };
+  }
+  function opdaterSendKnap() {
+    const b = document.getElementById("sendResultat"); if (!b) return;
+    const { klar, alle } = antal();
+    if (D.web) {  // webudgaven gemmer selv – knappen afslutter bare (Steffen 2026-10-27: tydeligt at intet skal sendes)
+      b.textContent = klar >= alle ? "✓ Færdig – alt er gemt hos Frankly" : "Gemmes automatisk · afslut";
+    } else b.textContent = klar >= alle ? "Færdig – send resultatet til Frankly" : "Send resultatet til Frankly";
+    b.classList.toggle("primaer", klar >= alle);
+  }
+  // ---- Webudgaven (blindtest.franklymydear.dk): karakterer sendes automatisk til jeres eget webhotel ----
+  function pakke(endelig) {
+    const { klar, alle } = antal();
+    return { test: D.navn, udgave: D.udgave || "fuld", runde: D.runde, version: D.version,
+      tester: tilstand.tester || "ukendt", kode: D.kode || "", sendt: lokalTid(), endelig: !!endelig,
+      bedoemt: klar, i_alt: alle, bedoemmelser: tilstand.bedoemmelser,
+      enhed: /Mobi|iPhone|iPad|Android/.test(navigator.userAgent) || matchMedia("(max-width: 760px)").matches ? "mobil" : "computer",
+      sete_beskeder: sete, rolle: tilstand.rolle || "", sprog: tilstand.sprog || "",
+      pakke: tilstand.pakke || "", ab: tilstand.ab || {} };
+  }
+  async function post(endelig) {
+    // text/plain = "simpel" forespørgsel uden forhåndstjek, så den også virker fra en anden adresse (GitHub Pages)
+    const r = await ægte(D.gemUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      body: JSON.stringify(pakke(endelig)), keepalive: !endelig });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+  let gemTimer = null;
+  function gemStatus(t) { const s = document.getElementById("gemStatus"); if (s) s.textContent = t; }
+  function autoGem() {
+    if (!D.web) return;
+    clearTimeout(gemTimer);
+    gemStatus("gemmer …");
+    gemTimer = setTimeout(() => post(false).then(() => gemStatus("✓ gemt hos Frankly"))
+      .catch(() => gemStatus("⚠ ikke gemt online endnu – gemt i browseren")), 1500);
+  }
+  addEventListener("pagehide", () => { if (D.web && antal().klar) { clearTimeout(gemTimer); post(false).catch(() => {}); } });
+
+  async function send() {
+    const { klar, alle } = antal();
+    if (!klar) return alert("Du har ikke givet nogen karakterer endnu.");
+    if (D.web) {
+      if (klar < alle && !confirm(`Du har bedømt ${klar} af ${alle} numre, og det er allerede gemt hos Frankly. Vil du afslutte nu? Du kan altid fortsætte senere.`)) return;
+      try {
+        await post(true);
+        gemStatus("✓ sendt til Frankly");
+        alert(klar >= alle ? "Tak! Alt er gemt hos Frankly My Dear. Du behøver ikke sende noget – du kan bare lukke siden."
+          : `Tak! ${klar} af ${alle} numre er gemt hos Frankly. Du kan fortsætte, når du vil.`);
+      } catch (e) {
+        alert("Det lykkedes ikke at sende lige nu – tjek internetforbindelsen og prøv igen. Dine karakterer er gemt i browseren.");
+      }
+      return;
+    }
+    if (klar < alle && !confirm(`Du har bedømt ${klar} af ${alle} numre. Vil du sende det, du har nu? (Du kan fortsætte og sende igen senere.)`)) return;
+    const navn = tilstand.tester || "ukendt";
+    const data = { test: D.navn, udgave: D.udgave || "fuld", runde: D.runde, version: D.version, tester: navn,
+      sendt: lokalTid(), bedoemt: klar, i_alt: alle, bedoemmelser: tilstand.bedoemmelser };
+    const filnavn = `${D.navn.replace(/\s+/g, "-")}-${navn.replace(/[^\wæøåÆØÅ-]+/g, "_")}.json`;
+    const fil = new File([JSON.stringify(data)], filnavn, { type: "application/json" });
+    const emne = `${D.navn} – resultat fra ${navn}`;
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [fil] })) {
+        await navigator.share({ files: [fil], title: emne, text: `Send til ${D.modtager}` });
+        return;
+      }
+    } catch (e) { if (e.name === "AbortError") return; }
+    // Reserve: hent filen ned og åbn en ny mail – testeren trækker filen fra "Overførsler" ind i mailen.
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(fil); a.download = filnavn; document.body.appendChild(a); a.click(); a.remove();
+    const tekst = `Hej Steffen\n\nHer er mit resultat fra ${D.navn} (${klar} af ${alle} numre bedømt).\n\n` +
+      `HUSK: træk filen "${filnavn}" fra mappen Overførsler ind i denne mail, før du sender.\n\nHilsen ${navn}`;
+    setTimeout(() => { location.href = `mailto:${D.modtager}?subject=${encodeURIComponent(emne)}&body=${encodeURIComponent(tekst)}`; }, 600);
+    alert(`Filen "${filnavn}" er gemt i Overførsler, og en ny mail åbner nu.\n\nTræk filen ind i mailen, og tryk Send.`);
+  }
+
+  const esc = s => String(s).replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+  function visTester() {
+    const u = document.querySelector("header .under");
+    u?.querySelector(".tester")?.remove();
+    u?.insertAdjacentHTML("beforeend", ` <span class="tester" style="opacity:.7">· Tester: ${esc(tilstand.tester)} ·
+      <a id="skiftNavn" style="color:var(--accent);cursor:pointer;text-decoration:underline">skift navn</a></span>`);
+    u?.querySelector("#skiftNavn")?.addEventListener("click", skiftNavn);
+  }
+  // "Skift navn" (Steffen 2026-10-24): starter forfra på denne enhed – det, der er gemt hos Frankly, bliver liggende
+  function skiftNavn() {
+    if (!confirm(`Skift navn og start forfra på denne enhed?\n\nKaraktererne, du har givet som "${tilstand.tester}", ` +
+      `er allerede gemt hos Frankly og bliver liggende.`)) return;
+    tilstand = { tester: "", bedoemmelser: {} }; gem(); location.reload();
+  }
+  window.fmdSkiftNavn = skiftNavn;
+  // Velkomstskærm (første gang): ikon, kort vejledning og navn – så det føles som at åbne en app.
+  // Beskeder fra Frankly (Steffen 2026-10-24): ../besked.json vises som popup – én gang pr. besked, ingen svar.
+  // {"beskeder": [{"id": "b1", "til": "alle" | "<fulde navn>", "runde": "2" (valgfri), "tekst": "…"}]}
+  const SETE = "fmd-blindtest-sete-beskeder";
+  let sete = [];
+  try { sete = JSON.parse(localStorage.getItem(SETE) || "[]"); } catch (e) {}
+  const norm = x => String(x || "").toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+  async function tjekBeskeder() {
+    if (!D.web || !tilstand.tester || document.getElementById("besked") || document.getElementById("velkomst")) return;
+    let d;
+    try { d = await (await ægte("../besked.json?x=" + Date.now(), { cache: "no-store" })).json(); } catch (e) { return; }
+    const b = (d.beskeder || []).find(x => x.id && x.tekst && !sete.includes(x.id) &&
+      (!x.til || norm(x.til) === "alle" || norm(x.til) === norm(tilstand.tester)) &&
+      (!x.runde || String(x.runde) === String(D.runde)));
+    if (!b || document.getElementById("besked")) return;
+    const v = document.createElement("div");
+    v.id = "besked";
+    v.innerHTML = `<div class="kort"><img src="${D.ikon}" alt="" width="56" height="56">
+      <div class="fra">Besked fra Frankly My Dear</div><p>${esc(b.tekst).replace(/\n/g, "<br>")}</p>
+      <button class="knap primaer">OK</button></div>`;
+    document.body.appendChild(v);
+    v.querySelector("button").onclick = () => {
+      sete.push(b.id);
+      try { localStorage.setItem(SETE, JSON.stringify(sete)); } catch (e) {}
+      v.remove(); tjekBeskeder();  // evt. næste besked
+      if (D.web) post(false).catch(() => {});  // kvittering: Frankly kan se, at beskeden er læst
+    };
+  }
+  setInterval(tjekBeskeder, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) tjekBeskeder(); });
+
+  // Karakterer fra TIDLIGERE runder på den samme søgning (samme tekst) udfyldes, når testeren har skrevet sit navn.
+  // Navnene ligger ikke i siden – kun en kort SHA-1 af det fulde navn (små bogstaver).
+  async function forudfyld() {
+    const t = D.tidligere;
+    if (!t || !tilstand.tester || tilstand.forudfyldt || !window.crypto?.subtle) return;
+    tilstand.forudfyldt = true;
+    const navn = tilstand.tester.toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+    const h = [...new Uint8Array(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(navn)))]
+      .map(x => x.toString(16).padStart(2, "0")).join("").slice(0, 12);
+    let ny = 0;
+    for (const [oid, numre] of Object.entries(t[h] || {}))
+      for (const [nid, k] of Object.entries(numre))
+        if (!tilstand.bedoemmelser[oid]?.[nid]) { (tilstand.bedoemmelser[oid] ||= {})[nid] = { karakter: k, tid: "tidligere runde" }; ny++; }
+    gem();
+    if (!ny) return;
+    if (D.web) await post(false).catch(() => {});
+    location.reload();  // siden tegnes forfra med de udfyldte karakterer
+  }
+
+  function velkomst() {
+    const v = document.createElement("div");
+    v.id = "velkomst";
+    v.innerHTML = `<div class="kort">
+      <img src="${D.ikon}" alt="" width="112" height="112">
+      <h2>${esc(D.navn)}</h2>
+      <p class="kort-tekst">Lyt til musik, og bedøm, hvor godt den passer til søgningen.</p>
+      <p class="kort-tekst svag">Du kan holde pause undervejs.</p>
+      <div class="mere"><p>Frankly My Dear tester to musiksøgemaskiner. Du ser en søgning – som en kunde har skrevet den – og
+        en række numre. Lyt, og giv hvert nummer en karakter: ${D.skala.map(x => `<b>${x[1]}</b>`).join(", ").replace(/, ([^,]*)$/, " eller $1")}.
+        Du får ikke at vide, hvilken søgemaskine der fandt hvad.</p>
+      <p><b>Bedøm, hvor godt musikken passer til søgningen – ikke om du selv kan lide den.</b>
+        Et godt nummer i den forkerte stemning får <b>${D.skala.at(-1)[1]}</b>.</p>
+      <p class="lille"><span class="kun-tastatur">Tasterne 1–4 giver karakter, mellemrum afspiller, F springer 30 sek. frem.</span>
+        Tryk i waveformen for at lytte et bestemt sted. Dine karakterer gemmes i browseren, så du kan holde pause og komme tilbage.
+        Når du er færdig: tryk <b>Send resultatet til Frankly</b> (på mobil i menuen ≡).</p></div>
+      <label>Dit fulde navn<input id="velkomstNavn" autocomplete="name" enterkeyhint="go" placeholder="Fx Thomas Hansen"></label>
+      <button class="knap primaer" id="velkomstStart">Start</button>
+      <button class="saadan" id="velkomstSaadan">Sådan virker det</button></div>`;
+    // Testerens rolle (Steffen 2026-10-26: så vi kan se, om fagfolk vurderer anderledes)
+  const ROLLER = [["", "Vælg …", "Choose …"], ["instruktoer", "Instruktør", "Director"], ["klipper", "Klipper", "Editor"],
+    ["music_supervisor", "Music supervisor", "Music supervisor"], ["producer", "Producer", "Producer"],
+    ["manuskript", "Manuskriptforfatter", "Screenwriter"], ["komponist", "Komponist / musiker", "Composer / musician"],
+    ["reklame", "Reklame / bureau", "Advertising / agency"], ["studerende", "Filmstuderende", "Film student"],
+    ["andet", "Andet", "Other"]];
+  // Introtekst fra runden (<runde>/intro.json, Steffen 2026-10-26): dansk eller engelsk efter browserens sprog;
+    // vejledningen ligger så bag "Sådan virker det" – også på computeren
+    // Dansk som standard (Steffen 2026-10-26); engelsk med knappen eller et link med ?sprog=en
+    if (D.intro) {
+      v.classList.add("med-intro");
+      v.querySelectorAll(".kort-tekst").forEach(e => e.remove());
+      v.querySelector("label").insertAdjacentHTML("afterend", `<label id="rolleLabel"><span></span><select id="velkomstRolle">
+        ${ROLLER.map(r => `<option value="${r[0]}"></option>`).join("")}</select></label>`);
+      v.querySelector(".kort").insertAdjacentHTML("afterbegin", '<button class="sprogknap" id="velkomstSprog" type="button"></button>');
+      const tegn = (sprog) => {
+        const L = D.intro[sprog] || D.intro.da, en = sprog === "en";
+        v.dataset.sprog = sprog;
+        v.querySelectorAll("p.intro").forEach(e => e.remove());
+        const h = v.querySelector("h2");
+        h.textContent = L.titel;
+        h.insertAdjacentHTML("afterend", L.afsnit.map(a => `<p class="intro">${esc(a)}</p>`).join(""));
+        v.querySelector("label").firstChild.textContent = L.navn;
+        v.querySelector("#velkomstNavn").placeholder = en ? "E.g. Thomas Hansen" : "Fx Thomas Hansen";
+        v.querySelector("#rolleLabel span").textContent = en ? "What do you work with?" : "Hvad arbejder du med?";
+        v.querySelectorAll("#velkomstRolle option").forEach((o, i) => o.textContent = ROLLER[i][en ? 2 : 1]);
+        v.querySelector("#velkomstStart").textContent = L.start;
+        v.querySelector("#velkomstSaadan").textContent = en ? "How it works" : "Sådan virker det";
+        v.querySelector("#velkomstSprog").textContent = en ? "Dansk" : "English";
+      };
+      const fraLink = new URLSearchParams(location.search).get("sprog");
+      tegn(fraLink === "en" && D.intro.en ? "en" : "da");
+      v.querySelector("#velkomstSprog").onclick = () => tegn(v.dataset.sprog === "en" ? "da" : "en");
+    }
+    document.body.appendChild(v);
+    const felt = v.querySelector("#velkomstNavn"), knap = v.querySelector("#velkomstStart");
+    const start = () => {
+      const n = felt.value.trim(); if (!n) { felt.focus(); return; }
+      const r = v.querySelector("#velkomstRolle");
+      if (r && !r.value) { r.focus(); r.classList.add("mangler"); return; }
+      if (r) { tilstand.rolle = r.value; tilstand.sprog = v.dataset.sprog || "da"; }
+      tilstand.tester = n; gem(); visTester(); v.remove();
+      if (D.pakker && !tilstand.pakke) { tilstand.pakke = pakkeFor(n); gem(); location.reload(); return; }
+      forudfyld(); tjekBeskeder();
+    };
+    knap.onclick = start;
+    v.querySelector("#velkomstSaadan").onclick = () => v.classList.toggle("vis-mere");
+    felt.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") start(); });
+    // på mobil åbner vi ikke tastaturet af sig selv – det skubber skærmen rundt
+    if (!matchMedia("(max-width: 760px)").matches) setTimeout(() => felt.focus(), 50);
+  }
+
+  // ---- A/B-sammenligninger: opgaver i listen (type "ab"), tegnet her og gemt i tilstand.ab ----
+  const AB_TEKST = {
+    da: { chip: "Sammenligning", tekst: "Lyt til begge klip, og vælg det, der passer bedst til spørgsmålet.",
+          lige: "Lige godt / ved ikke", af: "af", klip: "sek.",
+          tak: "Tak! Alt er gemt hos Frankly My Dear.", tak2: "Du behøver ikke sende noget – du kan bare lukke siden.",
+          luk: "Luk", afspil: "Afspil", pause: "Pause", vaelg: "Vælg", valgt: "✓ Valgt", ligeValgt: "✓ Lige godt / ved ikke" },
+    en: { chip: "Comparison", tekst: "Listen to both clips and choose the one that best fits the question.",
+          lige: "Equally / not sure", af: "of", klip: "sec.",
+          tak: "Thank you! Everything is saved with Frankly My Dear.", tak2: "You don't need to send anything – you can simply close the page.",
+          luk: "Close", afspil: "Play", pause: "Pause", vaelg: "Choose", valgt: "✓ Chosen", ligeValgt: "✓ Equally / not sure" },
+  };
+  const abT = () => AB_TEKST[tilstand.sprog === "en" ? "en" : "da"];
+  // A/B-afspiller (Steffen 2026-10-27): tydeligt hvad der spiller, en bar for hvor langt klippet er, og stilhed ved valg
+  const abLyd = new Audio();
+  let abAktiv = null, abKlip = null;  // "a"/"b" og klippets {start, klip}
+  function abOpdater() {
+    document.querySelectorAll("#ab-flade .ab-klip").forEach(el => {
+      const x = el.dataset.klip, spiller = x === abAktiv && !abLyd.paused;
+      el.classList.toggle("spiller", x === abAktiv);
+      const knap = el.querySelector("[data-afspil-ab]");
+      if (knap) knap.innerHTML = spiller ? "❚❚ " + abT().pause : "▶ " + abT().afspil;
+      const bar = el.querySelector(".ab-bar i");
+      if (bar) bar.style.width = (x === abAktiv && abKlip ? Math.min(100, 100 * Math.max(0, abLyd.currentTime - abKlip.start) / abKlip.klip) : 0) + "%";
+    });
+  }
+  function abStop() { abLyd.pause(); abAktiv = null; abKlip = null; abOpdater(); }
+  function afspilKlip(x, k) {
+    if (typeof lyd !== "undefined") lyd.pause();  // stop den almindelige afspiller
+    if (abAktiv === x && !abLyd.paused) { abLyd.pause(); abOpdater(); return; }  // samme klip igen = pause
+    if (abAktiv === x && abLyd.paused && abKlip) { abLyd.play(); abOpdater(); return; }
+    abAktiv = x; abKlip = { start: k.start || 0, klip: k.klip || 12 };
+    abLyd.src = k.lyd;
+    abLyd.onloadedmetadata = () => { abLyd.currentTime = abKlip.start; abLyd.play(); };
+    abOpdater();
+  }
+  abLyd.addEventListener("timeupdate", () => {
+    if (abKlip && abLyd.currentTime >= abKlip.start + abKlip.klip) return abStop();  // klippet er slut: sluk markeringen
+    abOpdater();
+  });
+  ["play", "pause", "ended"].forEach(e => abLyd.addEventListener(e, abOpdater));
+
+  // Én sammenligning som opgave i listen – samme opbygning som en søgning: spørgsmålet øverst, de to klip under
+  function abTegn(o, el, mobil, efter) {
+    const T = abT(), p = o.ab, valgt = tilstand.ab[p.id];
+    el.innerHTML = `<div class="prompt ab-spoerg"><span class="chip">${T.chip} · ${o.abNr} ${T.af} ${o.abAntal}</span>
+        <p class="kunde">${esc(p.spoergsmaal)}</p></div>
+      <p class="vejledning ab-vejl">${T.tekst} <span class="ab-sek">${p.klip_sek} ${T.klip}</span></p>
+      <div class="ab-par">${["a", "b"].map(x => `<div class="ab-klip ${valgt === x ? "valgt" : ""}" data-klip="${x}">
+          <div class="ab-bogstav">${x.toUpperCase()}</div>
+          <button class="knap ab-afspil" data-afspil-ab="${x}">▶ ${T.afspil}</button>
+          <div class="ab-bar"><i></i></div>
+          <button class="knap ${valgt === x ? "valgt" : "primaer"}" data-valg="${x}">${valgt === x ? T.valgt : `${T.vaelg} ${x.toUpperCase()}`}</button></div>`).join("")}</div>
+      <button class="ab-lige ${valgt === "lige" ? "valgt" : ""}" data-valg="lige">${valgt === "lige" ? T.ligeValgt : T.lige}</button>`;
+    el.querySelectorAll("[data-afspil-ab]").forEach(b => b.onclick = () =>
+      afspilKlip(b.dataset.afspilAb, { ...p[b.dataset.afspilAb], klip: p.klip_sek }));
+    el.querySelectorAll("[data-valg]").forEach(b => b.onclick = () => {
+      abStop();  // stilhed, til man selv trykker afspil i næste spørgsmål
+      tilstand.ab[p.id] = b.dataset.valg; gem(); opdaterSendKnap(); autoGem();
+      abTegn(o, el, mobil, efter);  // vis valget et øjeblik …
+      efter();                      // … og gå videre til næste ufærdige opgave
+    });
+    abOpdater();
+  }
+  window.fmdAB = { valgt: o => tilstand.ab[o.ab.id] || null, tegn: abTegn, stop: abStop };
+
+  // Slutskærm, når alt i pakken er besvaret: siger tydeligt, at intet skal sendes – eller, hvis nettet svigter,
+  // at det sendes næste gang
+  function sjekFaerdig() {
+    const { klar, alle } = antal();
+    if (!D.web || !alle || klar < alle || tilstand.takVist || document.getElementById("tak")) return;
+    tilstand.takVist = true; gem(); abStop();
+    const T = abT(), v = document.createElement("div");
+    v.id = "tak";
+    v.innerHTML = `<div class="kort"><div class="m-flueben">✓</div><h2>${T.tak}</h2><p>${T.tak2}</p>
+      <button class="knap" id="takLuk">${T.luk}</button></div>`;
+    v.querySelector("#takLuk").onclick = () => v.remove();
+    document.body.appendChild(v);
+    post(true).catch(() => {
+      const en = tilstand.sprog === "en";
+      v.querySelector("h2").textContent = en ? "Saved in your browser" : "Gemt i browseren";
+      v.querySelector("p").textContent = en ? "We couldn't reach Frankly right now. It will be sent automatically next time you open the test."
+        : "Vi kunne ikke nå Frankly lige nu. Det sendes automatisk, næste gang du åbner testen.";
+    });
+  }
+  window.fmdFaerdig = sjekFaerdig;
+  window.fmdWeb = !!D.web;  // mobilvisningen bruger det til at vise "gemmes automatisk" i stedet for "send"
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const gammel = document.getElementById("visResultat");
+    const b = document.createElement("button");
+    b.className = "knap"; b.id = "sendResultat"; b.onclick = send;
+    gammel.replaceWith(b); opdaterSendKnap();
+    document.querySelector("header h1")?.insertAdjacentHTML("beforebegin",
+      `<img src="${D.ikon}" alt="" width="40" height="40" style="margin-right:4px">`);
+    if (D.web) document.querySelector(".fremdrift")?.insertAdjacentHTML("beforeend",
+      ' <small id="gemStatus" style="color:var(--godt)"></small>');
+    if (tilstand.tester) { visTester(); forudfyld(); tjekBeskeder(); } else velkomst();
+    if (D.web && D.kode && !tilstand.tester) { const f = document.getElementById("velkomstNavn"); if (f) f.value = D.kode; }
+  });
+})();
+</script>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Model-dyst</h1>
+    <div class="under">Lyt og giv karakter – du ved ikke, hvilken model der fandt hvad.</div>
+  </div>
+  <div class="fremdrift"><div class="bjaelke"><i id="bjaelke"></i></div><small id="fremdrift">Indlæser …</small></div>
+  <button class="knap primaer" id="visResultat">Resultat</button>
+</header>
+<main>
+  <nav id="liste" aria-label="Opgaver"></nav>
+  <section id="indhold"><p class="tom">Indlæser …</p></section>
+</main>
+
+<script>
+const TYPER = { kort: "Kort søgning", scene: "Scene", dansk: "Dansk", uden: "Uden …", brief: "Brief",
+                vokal: "Vokal", lignende: "Find lignende", ab: "Sammenligning", skaev: "Skæv", stemning: "Stemning",
+                reference: "Reference", tempo: "Tempo", brug: "Brug", genre: "Genre" };
+let KAR = [["godt", "Godt", 2], ["delvist", "Delvist", 1], ["nej", "Nej", 0]];  // serveren sender testens skala
+const IKON_AFSPIL = '<svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg>';
+const IKON_PAUSE = '<svg viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z"/></svg>';
+
+let opgaver = [], bed = {}, aktiv = 0, fokus = 0, spillerId = null, visning = "opgave";
+let ORD = "Model", ORD_LILLE = "model", SPOERGSMAAL = "";  // spørgsmål over karakterknapperne (blindtest)
+const lydUrl = {};  // nummer-id → lydfil (blindtesten afspiller fra hjemmesidens filer)
+const lyd = new Audio();
+lyd.preload = "auto";
+let autoNaeste = true;
+try { autoNaeste = localStorage.getItem("dyst.autoNaeste") !== "0"; } catch (e) {}
+
+const $ = (s, el = document) => el.querySelector(s);
+const tid = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function pynt(titel) {
+  const m = titel.match(/^(FMD-\d{5}-\d{2})[_ -]*(.*)$/);
+  const tekst = (m ? m[2] : titel).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  return (m ? `<span class="kode">${m[1]}</span>` : "") + esc(tekst || titel);
+}
+
+function karakter(oid, nid) { return bed[oid]?.[nid]?.karakter || null; }
+function karakterNavn(k) { return (KAR.find(x => x[0] === k) || [, ""])[1]; }
+// A/B-sammenligninger (Filmskaber 01) står i listen på lige fod med søgningerne (Steffen 2026-10-27).
+// Webudgaven lægger dem ind som opgaver af typen "ab" og tegner/gemmer dem selv (window.fmdAB); én opgave = ét svar.
+const erAB = o => o.type === "ab";
+function iAlt(o) { return erAB(o) ? 1 : o.numre.length; }
+function antalBedoemt(o) { return erAB(o) ? (window.fmdAB?.valgt(o) ? 1 : 0) : o.numre.filter(n => karakter(o.id, n.id)).length; }
+function ordet() { return opgaver.some(erAB) ? ["Opgave", "opgaver", "svar"] : ["Søgning", "søgninger", "numre bedømt"]; }
+
+async function hent() {
+  const d = await (await fetch("/api/opgaver")).json();
+  opgaver = d.opgaver; bed = d.bedoemmelser || {};
+  ORD = d.ord || "Model"; ORD_LILLE = d.ord_lille || "model";
+  if (d.skala) KAR = d.skala;
+  SPOERGSMAAL = d.spoergsmaal || "";
+  if (d.navn) { document.title = d.navn; $("h1").textContent = d.navn; }
+  $(".under").textContent = `Lyt og giv karakter – du ved ikke, ${ORD_LILLE === "system" ? "hvilket" : "hvilken"} ${ORD_LILLE} der fandt hvad.`;
+  for (const o of opgaver) { if (o.reference?.lyd) lydUrl[o.reference.id] = o.reference.lyd;
+                             for (const n of o.numre) if (n.lyd) lydUrl[n.id] = n.lyd; }
+  if (!opgaver.length) {
+    $("#indhold").innerHTML = '<p class="tom">Ingen opgaver endnu. Kør scripts/dyst_saml.py, når modellerne er færdige.</p>';
+    $("#fremdrift").textContent = "";
+    return;
+  }
+  aktiv = Math.max(0, opgaver.findIndex(o => antalBedoemt(o) < iAlt(o)));
+  if (mobil) fokus = foersteManglende(aktiv);
+  tegnListe(); tegnOpgave();
+}
+
+function tegnFremdrift() {
+  const i_alt = opgaver.reduce((s, o) => s + iAlt(o), 0);
+  const klar = opgaver.reduce((s, o) => s + antalBedoemt(o), 0);
+  const faerdige = opgaver.filter(o => antalBedoemt(o) === iAlt(o)).length;
+  $("#bjaelke").style.width = (i_alt ? 100 * klar / i_alt : 0) + "%";
+  $("#fremdrift").innerHTML = `${faerdige} af ${opgaver.length} ${ordet()[1]} færdige · ${klar} af ${i_alt} ${ordet()[2]}` +
+    (klar && klar < i_alt ? ` · <a id="manglende">gå til næste manglende (${i_alt - klar})</a>` : "");
+}
+
+// ---- Mobil som en app: ét nummer ad gangen (smalle skærme; computeren bruger listen herunder) ----
+const MOBIL = matchMedia("(max-width: 760px)");
+let mobil = MOBIL.matches, mFaerdig = false;
+document.documentElement.classList.toggle("mobil", mobil);
+MOBIL.addEventListener("change", () => {
+  mobil = MOBIL.matches; document.documentElement.classList.toggle("mobil", mobil);
+  if (opgaver.length && visning === "opgave") tegnOpgave();
+});
+const IKON = {
+  tilbage: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  menu: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  luk: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+};
+function foersteManglende(j) { const o = opgaver[j]; return Math.max(0, o.numre.findIndex(n => !karakter(o.id, n.id))); }
+function naesteUfaerdige() {  // næste søgning med numre uden karakter, regnet fra den aktive og rundt
+  for (let d = 1; d <= opgaver.length; d++) {
+    const j = (aktiv + d) % opgaver.length;
+    if (antalBedoemt(opgaver[j]) < iAlt(opgaver[j])) return j;
+  }
+  return -1;
+}
+function samletFremdrift() {
+  const i_alt = opgaver.reduce((s, o) => s + iAlt(o), 0), klar = opgaver.reduce((s, o) => s + antalBedoemt(o), 0);
+  return { i_alt, klar, pct: i_alt ? 100 * klar / i_alt : 0, faerdige: opgaver.filter(o => antalBedoemt(o) === iAlt(o)).length };
+}
+
+// Efter et A/B-valg: videre til næste ufærdige opgave – eller slutskærmen, når alt er besvaret
+function efterAB() {
+  tegnListe();
+  const j = naesteUfaerdige();
+  setTimeout(() => { if (j >= 0) gaaTil(j); else window.fmdFaerdig?.(); }, 650);
+}
+
+function tegnMobil() {
+  const o = opgaver[aktiv], f = samletFremdrift(), alle = iAlt(o), [Ord, ord] = ordet();
+  const top = `<div class="m-bjaelke"><i style="width:${f.pct}%"></i></div>
+    <div class="m-linje"><button class="m-ikon" data-gaa="-1" aria-label="Forrige" ${aktiv === 0 ? "disabled" : ""}>${IKON.tilbage}</button>
+      <span>${Ord} ${aktiv + 1} af ${opgaver.length}</span>
+      <button class="m-ikon" id="m-menu" aria-label="Menu">${IKON.menu}</button></div>`;
+  if (erAB(o)) {
+    $("#indhold").innerHTML = `<div class="m-app">${top}<div class="m-ab" id="ab-flade"></div></div>${menuHtml()}`;
+    window.fmdAB?.tegn(o, $("#ab-flade"), true, efterAB);
+    return;
+  }
+  if (mFaerdig) {
+    const j = naesteUfaerdige();
+    $("#indhold").innerHTML = `<div class="m-app">${top}
+      <div class="m-faerdig"><div class="m-flueben">✓</div><h2>${Ord} ${aktiv + 1} færdig</h2>
+        <div class="m-tael">${alle} af ${alle} numre bedømt${opgaver.length && window.FMD_DATA?.web ? " · gemt hos Frankly" : ""}</div>
+        <div class="bjaelke"><i style="width:${f.pct}%"></i></div>
+        <div class="m-tael">${f.faerdige} af ${opgaver.length} ${ord}</div>
+        <p class="m-tael" id="m-pausetekst" hidden>Dine karakterer er gemt. Luk bare siden – du fortsætter her, når du åbner linket igen.</p></div>
+      <div class="m-knapper">${j >= 0 ? `<button class="knap primaer" id="m-naeste">Næste ${ord === "opgaver" ? "opgave" : "søgning"}</button>
+        <button class="knap" id="m-pause">Hold pause</button>` :
+        (window.fmdWeb ? `<p class="m-tael">Alt er bedømt og gemt hos Frankly ✓ Du behøver ikke sende noget.</p>`
+          : `<button class="knap primaer" id="m-send">Alt er bedømt – send resultatet</button>`)}
+        <button class="knap" id="m-igen">Se numrene igen</button></div></div>${menuHtml()}`;
+    return;
+  }
+  const n = o.numre[fokus], k = karakter(o.id, n.id);
+  const ref = o.reference ? `<div class="reference">
+      <button class="afspil" data-afspil="ref" aria-label="Afspil reference">${IKON_AFSPIL}</button>
+      <div><div class="info">Reference${o.reference.slut ? ` · udsnit ${tid(o.reference.start)}–${tid(o.reference.slut)}` : ""}</div>
+      <div class="titel">${pynt(o.reference.titel)}</div></div>
+      <canvas class="boelge" data-boelge-id="${o.reference.id}" data-varighed="${o.reference.varighed || 0}"
+        data-udsnit="${o.reference.slut ? `${o.reference.start},${o.reference.slut}` : ""}"></canvas></div>` : "";
+  $("#indhold").innerHTML = `<div class="m-app">${top}
+    <div class="m-soeg"><div class="m-etiket">${o.reference ? "Find musik der ligner" : "Kunden søgte efter"}</div>
+      <p class="kunde">“${esc(o.kunde)}”</p>${ref}</div>
+    <div class="m-midte">
+      <div class="m-tael">Nummer ${fokus + 1} af ${alle}</div>
+      <div class="m-prikker">${o.numre.map((m, j) => `<button data-mfokus="${j}" aria-label="Nummer ${j + 1}"
+        class="${j === fokus ? "nu" : ""}" ${karakter(o.id, m.id) ? `data-kk="${karakter(o.id, m.id)}"` : ""}><i></i></button>`).join("")}</div>
+      <div class="m-titel">${pynt(n.titel)}</div>
+      <div class="m-kunstner">${esc(n.kilde)} · ${tid(n.varighed)}</div>
+      <button class="m-afspil" id="m-afspil" data-afspil="${fokus}" aria-label="Afspil">${IKON_AFSPIL}</button>
+      <canvas class="boelge" data-boelge-id="${n.id}" data-i="${fokus}" data-varighed="${n.varighed || 0}"></canvas>
+      <div class="m-tider"><button class="m-lille" data-frastart="${fokus}">Fra starten</button>
+        <button class="m-lille" data-frem="${fokus}">+30 sek.</button></div>
+      ${k ? `<span class="m-valgt" data-k="${k}">${karakterNavn(k)}</span>` : ""}
+    </div>
+    ${SPOERGSMAAL ? `<div class="m-spoerg">${o.reference ? "Matcher nummeret referencen?" : SPOERGSMAAL}</div>` : ""}
+    <div class="m-bund">${KAR.map(([kk, t]) =>
+      `<button data-k="${kk}" data-i="${fokus}" aria-pressed="${k === kk}">${t}</button>`).join("")}</div>
+  </div>${menuHtml()}`;
+  opdaterSpiller();
+  document.querySelectorAll("canvas.boelge").forEach(c => hentBoelge(c.dataset.boelgeId).then(() => tegnBoelge(c)));
+}
+
+function menuHtml() {
+  return `<div class="m-menu" id="m-menuflade">
+    <div class="m-linje"><span style="padding-left:12px">Menu</span><button class="m-ikon" id="m-luk" aria-label="Luk">${IKON.luk}</button></div>
+    ${window.fmdWeb ? `<p>Dine svar gemmes automatisk hos Frankly – du behøver ikke sende noget.</p>
+      <button class="knap" id="m-send">Afslut testen</button>`
+      : `<button class="knap primaer" id="m-send">Send resultatet til Frankly</button>`}
+    ${window.fmdSkiftNavn ? `<button class="knap" id="m-skift">Skift navn</button>` : ""}
+    <h3>${ordet()[0] === "Opgave" ? "Opgaver" : "Søgninger"}</h3>
+    ${opgaver.map((x, j) => { const mangler = iAlt(x) - antalBedoemt(x);
+      return `<button class="m-punkt ${j === aktiv ? "nu" : ""} ${mangler ? "" : "faerdig"}" data-gaatil="${j}">
+        <span>${j + 1}. ${erAB(x) ? `${TYPER.ab}: ` : ""}${esc(x.kunde.slice(0, 60))}</span><small>${mangler ? (erAB(x) ? "mangler" : `${mangler} mangler`) : "✓"}</small></button>`; }).join("")}
+    <h3>Sådan virker det</h3>
+    <p>Lyt til hvert nummer, og bedøm, hvor godt det passer til søgningen – ikke om du selv kan lide det.
+      Et godt nummer i den forkerte stemning får ${KAR.at(-1)[1]}. Tryk i waveformen for at lytte et andet sted.</p>
+    <p>Dine karakterer gemmes løbende, så du kan holde pause og komme tilbage.</p></div>`;
+}
+
+function tegnListe() {
+  $("#liste").innerHTML = opgaver.map((o, i) => {
+    const n = antalBedoemt(o), alle = iAlt(o);
+    const status = n === alle ? "faerdig" : n > 0 ? "i-gang" : "ikke-startet";
+    return `<button class="${i === aktiv && visning === "opgave" ? "valgt" : ""} ${status}" data-i="${i}">
+      <span class="type">${TYPER[o.type] || o.type}${o.type !== "lignende" && o.sprog ? ` · ${o.sprog === "da" ? "DK" : "ENG"}` : ""}</span>
+      <span class="navn">${esc(o.kunde)}</span><span class="tal">${n === alle ? "✓" : erAB(o) ? "mangler" : `${alle - n} mangler`}</span></button>`;
+  }).join("");
+  tegnFremdrift();
+  // Listen til venstre følger med: den aktive søgning rulles ind i midten af listen
+  const nav = $("#liste"), valgt = nav.querySelector(".valgt");
+  if (valgt && nav.scrollHeight > nav.clientHeight) {
+    const top = valgt.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+    nav.scrollTop = Math.max(0, top - nav.clientHeight / 2 + valgt.offsetHeight / 2);
+  }
+}
+
+function tegnOpgave() {
+  visning = "opgave";
+  if (mobil) return tegnMobil();
+  const o = opgaver[aktiv];
+  if (erAB(o)) {
+    $("#indhold").innerHTML = `<div id="ab-flade"></div>
+      <div class="bund"><button class="knap" id="forrige" ${aktiv === 0 ? "disabled" : ""}>← Forrige</button>
+        <button class="knap" id="naeste" ${aktiv === opgaver.length - 1 ? "disabled" : ""}>Næste →</button></div>`;
+    window.fmdAB?.tegn(o, $("#ab-flade"), false, efterAB);
+    return;
+  }
+  const ref = o.reference ? `<div class="reference">
+      <button class="afspil" data-afspil="ref" aria-label="Afspil reference">${IKON_AFSPIL}</button>
+      <div><div class="info">Reference${o.reference.slut ? ` · udsnit ${tid(o.reference.start)}–${tid(o.reference.slut)}` : ""}</div>
+      <div class="titel">${pynt(o.reference.titel)}</div><div class="info">${esc(o.reference.kilde)}</div></div>
+      <canvas class="boelge" data-boelge-id="${o.reference.id}" data-varighed="${o.reference.varighed || 0}"
+        data-udsnit="${o.reference.slut ? `${o.reference.start},${o.reference.slut}` : ""}"></canvas></div>` : "";
+  $("#indhold").innerHTML = `
+    <div class="prompt">
+    <span class="chip">${TYPER[o.type] || o.type}</span>
+    ${o.type !== "lignende" && o.sprog ? `<span class="chip sprog-${o.sprog}">${o.sprog === "da" ? "Dansk" : "Engelsk"}</span>
+      <span class="info">&nbsp;kunden skrev på ${o.sprog === "da" ? "dansk" : "engelsk"}</span>` : ""}
+    <p class="kunde">“${esc(o.kunde)}”</p>
+    ${o.beskrivelse ? `<p class="motor">Motoren søgte efter: <i>${esc(o.beskrivelse)}</i></p>` : ""}
+    ${ref}
+    </div>
+    <p class="vejledning">${SPOERGSMAAL && !o.reference ? `<span class="spoerg">${SPOERGSMAAL}</span>` : `Passer nummeret til ${o.reference ? "referencen" : "søgningen"}?`} <b>Bedøm hvor godt det matcher – ikke om du selv kan lide det.</b> ${o.vejledning || "Det afspilles fra det sted, motoren fandt."}</p>
+    ${o.numre.map((n, i) => `
+      <div class="raekke ${i === fokus ? "fokus" : ""}" data-i="${i}" data-id="${n.id}"
+           ${karakter(o.id, n.id) ? `data-k="${karakter(o.id, n.id)}"` : ""}>
+        <span class="nr">${karakter(o.id, n.id) ? "✓" : i + 1}</span>
+        <button class="afspil" data-afspil="${i}" aria-label="Afspil">${IKON_AFSPIL}</button>
+        <div><div class="titel">${pynt(n.titel)}<span class="valgt-karakter">${karakterNavn(karakter(o.id, n.id))}</span><span class="mangler-maerke">mangler karakter</span></div>
+          <div class="info">${esc(n.kilde)} · ${tid(n.varighed)} ·${o.skjulStart ? "" : ` lytter fra ${tid(n.start)} ·`}
+            <a data-fraStart="${i}">fra starten</a> · <a data-frem="${i}">+30 sek.</a></div></div>
+        <div class="karakter">${KAR.map(([k, t]) =>
+          `<button data-k="${k}" data-i="${i}" aria-pressed="${karakter(o.id, n.id) === k}">${t}</button>`).join("")}</div>
+        <canvas class="boelge" data-boelge-id="${n.id}" data-i="${i}" data-varighed="${n.varighed || 0}"></canvas>
+        <div class="forloeb"></div>
+      </div>`).join("")}
+    <div class="bund">
+      <button class="knap" id="forrige" ${aktiv === 0 ? "disabled" : ""}>← Forrige</button>
+      <button class="knap" id="naeste" ${aktiv === opgaver.length - 1 ? "disabled" : ""}>Næste →</button>
+      <label><input type="checkbox" id="auto" ${autoNaeste ? "checked" : ""}> Afspil næste nummer, når jeg har givet karakter</label>
+    </div>
+    <p class="taster"><kbd>Mellemrum</kbd> afspil/pause · ${KAR.map(([k, t], i) => `<kbd>${i + 1}</kbd> ${t}`).join(" · ")} ·
+      <kbd>F</kbd> +30 sek. · <kbd>↑</kbd><kbd>↓</kbd> skift nummer · <kbd>←</kbd><kbd>→</kbd> skift søgning</p>`;
+  opdaterSpiller();
+  document.querySelectorAll("canvas.boelge").forEach(c => hentBoelge(c.dataset.boelgeId).then(() => tegnBoelge(c)));
+}
+
+// ---- Waveform: hjemmesidens egne bølgeformer (via /api/boelge), viser hvor man er, klik = start dér ----
+const boelger = {};  // nummer-id → Promise<{streger, sek} | null>
+function hentBoelge(id) {
+  return boelger[id] ||= fetch(`/api/boelge/${id}`).then(r => r.ok ? r.json() : null).catch(() => null);
+}
+function farve(navn) { return getComputedStyle(document.documentElement).getPropertyValue(navn).trim(); }
+
+async function tegnBoelge(c) {
+  const b = await hentBoelge(c.dataset.boelgeId);
+  const raekke = c.closest(".raekke");
+  if (!b || !b.streger.length) { c.style.display = "none"; return; }
+  raekke?.classList.add("har-boelge");
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const varighed = +c.dataset.varighed || b.sek;
+  const spiller = spillerId === c.dataset.boelgeId && lyd.duration;
+  const pos = spiller ? lyd.currentTime / lyd.duration : -1;
+  if (c.dataset.udsnit) {  // referencens udsnit skraveres
+    const [a, s] = c.dataset.udsnit.split(",").map(Number);
+    g.globalAlpha = .28; g.fillStyle = farve("--accent");
+    g.fillRect(w * a / varighed, 0, w * (s - a) / varighed, h);
+    g.globalAlpha = 1;
+  }
+  const bredde = 3, antal = Math.floor(w / bredde);
+  const svag = farve("--svag"), spillet = farve("--accent"), mid = h / 2;
+  g.globalAlpha = .75;
+  for (let k = 0; k < antal; k++) {
+    const v = b.streger[Math.floor(k * b.streger.length / antal)] || 0;
+    const hoejde = Math.max(1, v * (h - 2));
+    g.fillStyle = pos >= 0 && k / antal <= pos ? spillet : svag;
+    g.fillRect(k * bredde, mid - hoejde / 2, bredde - 1, hoejde);
+  }
+  g.globalAlpha = 1;
+  if (pos >= 0) { g.fillStyle = farve("--tekst"); g.fillRect(Math.round(w * pos) - 1, 0, 2, h); }
+  const hover = c.dataset.hover;
+  if (hover !== undefined && hover !== "") {
+    const x = +hover;
+    g.fillStyle = farve("--svag"); g.fillRect(x, 0, 1, h);
+    g.font = "11px -apple-system, sans-serif"; g.fillStyle = farve("--tekst");
+    const t = tid(varighed * x / w);
+    g.fillText(t, Math.min(x + 4, w - g.measureText(t).width - 2), 11);
+  }
+}
+
+function tegnSpillende() {
+  document.querySelectorAll(`canvas.boelge[data-boelge-id="${spillerId}"]`).forEach(tegnBoelge);
+}
+(function loekke() { if (!lyd.paused) tegnSpillende(); requestAnimationFrame(loekke); })();
+window.addEventListener("resize", () => document.querySelectorAll("canvas.boelge").forEach(tegnBoelge));
+
+document.addEventListener("mousemove", e => {
+  const c = e.target.closest?.("canvas.boelge");
+  document.querySelectorAll("canvas.boelge[data-hover]").forEach(x => {
+    if (x !== c) { delete x.dataset.hover; tegnBoelge(x); }
+  });
+  if (c) { c.dataset.hover = e.clientX - c.getBoundingClientRect().left; tegnBoelge(c); }
+});
+
+let venterStart = null;  // hvor det nye nummer skal starte, når browseren kender dets længde
+lyd.addEventListener("loadedmetadata", () => {
+  if (venterStart === null) return;
+  lyd.currentTime = Math.min(venterStart, Math.max(0, lyd.duration - 1));
+  venterStart = null;
+  lyd.play();
+});
+
+function afspil(id, start) {
+  if (spillerId === id && !lyd.paused) { lyd.pause(); opdaterSpiller(); return; }
+  if (spillerId !== id) {
+    spillerId = id;
+    venterStart = start || 0;
+    lyd.src = lydUrl[id] || `/api/lyd/${id}`;
+  } else {
+    lyd.play();
+  }
+  opdaterSpiller();
+}
+
+function frem(n) {  // spring 30 sek. frem i nummeret (starter det, hvis det ikke spiller)
+  if (spillerId !== n.id) return afspil(n.id, (n.start || 0) + 30);
+  lyd.currentTime = Math.min(lyd.currentTime + 30, Math.max(0, (lyd.duration || 0) - 1));
+  if (lyd.paused) lyd.play();
+}
+
+function opdaterSpiller() {
+  document.querySelectorAll(".raekke").forEach(r => {
+    const spiller = r.dataset.id === spillerId && !lyd.paused;
+    r.classList.toggle("spiller", r.dataset.id === spillerId);
+    $(".afspil", r).innerHTML = spiller ? IKON_PAUSE : IKON_AFSPIL;
+  });
+  const o = opgaver[aktiv], refKnap = $('[data-afspil="ref"]');
+  if (refKnap && o.reference) refKnap.innerHTML = (spillerId === o.reference.id && !lyd.paused) ? IKON_PAUSE : IKON_AFSPIL;
+  const mKnap = $("#m-afspil");
+  if (mKnap) mKnap.innerHTML = (spillerId === o.numre[fokus]?.id && !lyd.paused) ? IKON_PAUSE : IKON_AFSPIL;
+}
+
+lyd.addEventListener("timeupdate", () => {
+  const r = document.querySelector(`.raekke[data-id="${spillerId}"] .forloeb`);
+  if (r && lyd.duration) r.style.width = (100 * lyd.currentTime / lyd.duration) + "%";
+});
+["play", "pause", "ended"].forEach(e => lyd.addEventListener(e, opdaterSpiller));
+
+async function giv(i, k) {
+  const o = opgaver[aktiv], n = o.numre[i];
+  const ny = karakter(o.id, n.id) === k ? null : k;  // klik igen = fortryd
+  if (ny) (bed[o.id] ||= {})[n.id] = { karakter: ny }; else delete bed[o.id]?.[n.id];
+  if (mobil) return givMobil(o, n, i, ny);
+  document.querySelectorAll(`.raekke[data-i="${i}"] .karakter button`).forEach(b =>
+    b.setAttribute("aria-pressed", b.dataset.k === ny));
+  const raekke = document.querySelector(`.raekke[data-i="${i}"]`);
+  if (ny) raekke.dataset.k = ny; else delete raekke.dataset.k;
+  $(".nr", raekke).textContent = ny ? "✓" : i + 1;
+  $(".valgt-karakter", raekke).textContent = karakterNavn(ny);
+  tegnListe();
+  fetch("/api/bedoem", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ opgave: o.id, nummer: n.id, karakter: ny }) })
+    .catch(() => alert("Karakteren blev ikke gemt – kører fmd-dyst stadig?"));
+  if (ny && autoNaeste) {
+    const naeste = o.numre.findIndex((m, j) => j > i && !karakter(o.id, m.id));
+    if (naeste >= 0) { saetFokus(naeste); afspil(o.numre[naeste].id, o.numre[naeste].start); }
+    else lyd.pause();
+  }
+}
+
+// Mobil: gem karakteren, gå videre til næste nummer uden karakter – eller vis "Søgning færdig"
+function givMobil(o, n, i, ny) {
+  tegnListe();
+  fetch("/api/bedoem", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ opgave: o.id, nummer: n.id, karakter: ny }) }).catch(() => {});
+  if (!ny) return tegnMobil();
+  const naeste = [...o.numre.keys()].map(d => (i + 1 + d) % o.numre.length).find(j => !karakter(o.id, o.numre[j].id));
+  if (naeste === undefined) { lyd.pause(); mFaerdig = true; return tegnMobil(); }
+  fokus = naeste; spillerId = null; tegnMobil();
+  afspil(o.numre[naeste].id, o.numre[naeste].start);
+}
+
+function saetFokus(i) {
+  if (mobil) {
+    const ny = Math.max(0, Math.min(i, opgaver[aktiv].numre.length - 1));
+    if (ny !== fokus) { fokus = ny; tegnMobil(); }
+    return;
+  }
+  fokus = Math.max(0, Math.min(i, opgaver[aktiv].numre.length - 1));
+  document.querySelectorAll(".raekke").forEach(r => r.classList.toggle("fokus", +r.dataset.i === fokus));
+  document.querySelector(`.raekke[data-i="${fokus}"]`)?.scrollIntoView({ block: "nearest" });
+}
+
+function gaaTil(i) {
+  if (i < 0 || i >= opgaver.length) return;
+  aktiv = i; fokus = mobil && !erAB(opgaver[i]) ? foersteManglende(i) : 0; mFaerdig = false; lyd.pause(); spillerId = null;
+  window.fmdAB?.stop();
+  tegnListe(); tegnOpgave(); window.scrollTo(0, 0);
+}
+
+document.addEventListener("click", e => {
+  const c = e.target.closest("canvas.boelge");
+  if (c) {  // klik i waveformen: start (eller spring) dertil
+    const r = c.getBoundingClientRect(), id = c.dataset.boelgeId;
+    const varighed = +c.dataset.varighed || lyd.duration || 0;
+    const sek = Math.max(0, varighed * (e.clientX - r.left) / r.width);
+    if (c.dataset.i !== undefined) saetFokus(+c.dataset.i);
+    if (spillerId === id && lyd.duration) { lyd.currentTime = Math.min(sek, lyd.duration - 0.5); lyd.play(); }
+    else { if (spillerId === id) spillerId = null; afspil(id, sek); }
+    return;
+  }
+  const t = e.target.closest("button, a");
+  if (!t || t.closest("#ab-flade")) return;  // A/B-knapperne styres af webudgaven selv
+  if (t.closest("#liste")) return gaaTil(+t.dataset.i);
+  if (t.id === "visResultat") return visResultat(false);
+  if (t.id === "manglende") {  // første nummer uden karakter, regnet fra den aktive søgning og rundt
+    for (let d = 0; d < opgaver.length; d++) {
+      const j = (aktiv + d) % opgaver.length, o = opgaver[j];
+      if (erAB(o)) { if (!antalBedoemt(o)) return gaaTil(j); continue; }
+      const i = o.numre.findIndex(n => !karakter(o.id, n.id));
+      if (i < 0) continue;
+      if (j !== aktiv || visning !== "opgave") gaaTil(j);
+      saetFokus(i);
+      document.querySelector(`.raekke[data-i="${i}"]`)?.scrollIntoView({ block: "center" });
+      return;
+    }
+    return;
+  }
+  if (t.id === "afsloer") return visResultat(true);
+  if (t.id === "tilbage") return gaaTil(aktiv);
+  if (t.id === "forrige") return gaaTil(aktiv - 1);
+  if (t.id === "naeste") return gaaTil(aktiv + 1);
+  if (t.dataset.gaa) return gaaTil(aktiv + +t.dataset.gaa);
+  if (t.dataset.mfokus !== undefined) { spillerId = null; lyd.pause(); return saetFokus(+t.dataset.mfokus); }
+  if (t.dataset.gaatil !== undefined) return gaaTil(+t.dataset.gaatil);
+  if (t.id === "m-menu") return $("#m-menuflade").classList.add("aaben");
+  if (t.id === "m-luk") return $("#m-menuflade").classList.remove("aaben");
+  if (t.id === "m-send") { $("#m-menuflade")?.classList.remove("aaben"); return ($("#sendResultat") || $("#visResultat"))?.click(); }
+  if (t.id === "m-naeste") return gaaTil(naesteUfaerdige());
+  if (t.id === "m-skift") return window.fmdSkiftNavn?.();
+  if (t.id === "m-pause") { lyd.pause(); $("#m-pausetekst").hidden = false; return; }
+  if (t.id === "m-igen") { mFaerdig = false; fokus = 0; return tegnMobil(); }
+  const o = opgaver[aktiv];
+  if (t.dataset.afspil === "ref") return afspil(o.reference.id, o.reference.start);
+  if (t.dataset.afspil !== undefined) { saetFokus(+t.dataset.afspil); const n = o.numre[+t.dataset.afspil]; return afspil(n.id, n.start); }
+  if (t.dataset.frastart !== undefined) { const n = o.numre[+t.dataset.frastart]; spillerId = null; saetFokus(+t.dataset.frastart); return afspil(n.id, 0); }
+  if (t.dataset.frem !== undefined) { const n = o.numre[+t.dataset.frem]; saetFokus(+t.dataset.frem); return frem(n); }
+  if (t.dataset.k) { saetFokus(+t.dataset.i); return giv(+t.dataset.i, t.dataset.k); }
+});
+
+document.addEventListener("change", e => {
+  if (e.target.id === "auto") {
+    autoNaeste = e.target.checked;
+    try { localStorage.setItem("dyst.autoNaeste", autoNaeste ? "1" : "0"); } catch (err) {}
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (visning !== "opgave" || e.metaKey || e.ctrlKey || e.target.matches("input, textarea")) return;
+  const o = opgaver[aktiv]; if (!o) return;
+  if (erAB(o)) {  // A/B: kun skift opgave med piletasterne (valget træffes med knapperne)
+    if (e.key === "ArrowRight") gaaTil(aktiv + 1); else if (e.key === "ArrowLeft") gaaTil(aktiv - 1);
+    return;
+  }
+  const n = o.numre[fokus];
+  if (e.key === " ") { e.preventDefault(); afspil(n.id, n.start); }
+  else if (/^[1-9]$/.test(e.key) && KAR[+e.key - 1]) giv(fokus, KAR[+e.key - 1][0]);
+  else if (e.key === "f" || e.key === "F") frem(n);
+  else if (e.key === "ArrowDown") { e.preventDefault(); saetFokus(fokus + 1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); saetFokus(fokus - 1); }
+  else if (e.key === "ArrowRight") gaaTil(aktiv + 1);
+  else if (e.key === "ArrowLeft") gaaTil(aktiv - 1);
+});
+
+async function visResultat(afsloer) {
+  visning = "resultat"; lyd.pause(); tegnListe();
+  const r = await (await fetch(`/api/resultat?afsloer=${afsloer}`)).json();
+  const typer = [...new Set(r.modeller.flatMap(m => Object.keys(m.typer)))];
+  const sprog = [...new Set(r.modeller.flatMap(m => Object.keys(m.sprog || {})))].sort();
+  const SPROG = { da: "Dansk", en: "Engelsk" };
+  const pct = x => x == null ? "–" : Math.round(100 * x);
+  $("#indhold").innerHTML = `
+    <span class="chip">Resultat</span>
+    <p class="kunde">${r.faerdige} af ${r.i_alt} søgninger er færdigbedømt</p>
+    <p class="forklaring">Kun søgninger, hvor alle numre har fået karakter, tæller med.</p>
+    ${r.faerdige ? `<table>
+      <tr><th>${ORD}</th>${afsloer ? "<th>Navn</th>" : ""}<th>Samlet score</th><th>${KAR[0][1]} i top 5</th><th>Brugbare i top 5</th>
+        ${typer.map(t => `<th>${TYPER[t] || t}</th>`).join("")}</tr>
+      ${r.modeller.map(m => `<tr><td>${m.etiket}</td>${afsloer ? `<td><b>${esc(m.model)}</b></td>` : ""}
+        <td class="stor">${pct(m.ndcg)}</td><td class="stor">${m.top == null ? "–" : m.top.toFixed(1)}</td>
+        <td>${m.traef == null ? "–" : m.traef.toFixed(1)} af 5</td>
+        ${typer.map(t => `<td>${pct(m.typer[t])}</td>`).join("")}</tr>`).join("")}
+    </table>
+    ${sprog.length ? `<h3>Tekstsøgninger efter sprog</h3>
+    <table>
+      <tr><th>${ORD}</th>${afsloer ? "<th>Navn</th>" : ""}${sprog.map(s => `<th>${SPROG[s] || s}</th>`).join("")}</tr>
+      ${r.modeller.map(m => `<tr><td>${m.etiket}</td>${afsloer ? `<td><b>${esc(m.model)}</b></td>` : ""}
+        ${sprog.map(s => `<td class="stor">${pct(m.sprog[s])}<small class="info"> · ${m.sprog_antal[s] || 0} søgn.</small></td>`).join("")}</tr>`).join("")}
+    </table>
+    <p class="forklaring">Kun tekstsøgninger ("Find lignende" har ingen tekst). Sproget er det, kunden skrev på.
+      AIMS får kundens tekst direkte; vores motor får en engelsk lydbeskrivelse (i stedet for det kommende sproglag).</p>` : ""}
+    <p class="forklaring">Samlet score (0–100): hvor tæt ${ORD_LILLE}ens top 5 kommer på den bedst mulige top 5 blandt de numre,
+      du har bedømt for søgningen (nDCG@5; ${KAR.filter(x => x[2] > 0).map(([k, t, p]) => `${t} = ${p}`).join(", ")} point). ${KAR[0][1]} i top 5 = hvor mange af ${ORD_LILLE}ens
+      5 første numre du gav ${KAR[0][1]}. Brugbare = hvor mange du gav ${KAR.filter(x => x[2] > 0).map(x => x[1]).join(", ").replace(/, ([^,]*)$/, " eller $1")}.</p>` : ""}
+    <div class="bund">
+      <button class="knap" id="tilbage">← Tilbage til bedømmelsen</button>
+      ${afsloer || !r.faerdige ? "" : `<button class="knap primaer" id="afsloer">Afslør hvilket ${ORD_LILLE} der er hvilket</button>`}
+    </div>`;
+}
+
+// Den faste søgetekst står lige under toppen; rækker, der rulles frem, må ikke gemme sig bag den.
+const maal = new ResizeObserver(() => {
+  // på mobil står toppen ikke fast – så er det kun søgeteksten, der skal holdes fri
+  const h = getComputedStyle($("header")).position === "sticky" ? $("header").offsetHeight : 0;
+  const p = $(".prompt")?.offsetHeight || 0;
+  document.documentElement.style.setProperty("--hoved", h + "px");
+  document.documentElement.style.setProperty("--fast", (h + p + 8) + "px");
+});
+maal.observe($("header"));
+new MutationObserver(() => { const p = $(".prompt"); if (p) maal.observe(p); }).observe($("#indhold"), { childList: true });
+
+hent();
+</script>
+</body>
+</html>
